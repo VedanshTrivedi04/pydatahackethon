@@ -137,6 +137,10 @@ def create_application() -> FastAPI:
     from engine.api.middleware.rate_limiter import RateLimiterMiddleware
     app.add_middleware(RateLimiterMiddleware)
 
+    # 5. Prometheus Metrics — records request counts and durations
+    from engine.api.middleware.metrics import MetricsMiddleware
+    app.add_middleware(MetricsMiddleware)
+
     # -------------------------------------------------------------------
     # Exception Handlers
     # -------------------------------------------------------------------
@@ -147,7 +151,8 @@ def create_application() -> FastAPI:
     # -------------------------------------------------------------------
     API_PREFIX = "/api/v1"
 
-    from engine.api.routes import auth
+    from engine.api.routes import auth, metrics
+    app.include_router(metrics.router, prefix=API_PREFIX)
     app.include_router(auth.router, prefix=API_PREFIX)
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(tenants.router, prefix=API_PREFIX)

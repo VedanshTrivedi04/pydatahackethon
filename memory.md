@@ -403,8 +403,8 @@ A comprehensive architectural review of the codebase identified that while the C
 | 14 | Correlation IDs | ✅ DONE |
 | 15 | Redis Streams Event Bus | ✅ DONE |
 | 16 | Rate Limiter | ✅ DONE |
-| 17 | RBAC | ⬜ NEXT |
-| 18 | Observability | ⬜ PENDING |
+| 17 | RBAC | ✅ DONE |
+| 18 | Observability | ⬜ NEXT |
 | 19 | Feature Flags | ⬜ PENDING |
 | 20 | Subscription Plans | ⬜ PENDING |
 | 21 | Cache Layer | ⬜ PENDING |
@@ -464,11 +464,29 @@ A comprehensive architectural review of the codebase identified that while the C
 
 ---
 
-## Phase 17 — NEXT: Identity, Users & RBAC
+## Phase 17 — COMPLETED ✅ (Identity, Users & RBAC)
+
+### Files Modified
+| File | Purpose |
+|---|---|
+| `engine/config/settings.py` | Added JWT configuration parameters (`secret_key`, `algorithm`, `access_token_expire_minutes`). |
+| `engine/core/models/user.py` | Created human `User` model with `passlib` bcrypt hashed passwords. |
+| `engine/core/models/tenant_member.py` | Created `TenantMember` mapping model with RBAC roles (`owner`, `admin`, `developer`, `viewer`). |
+| `engine/core/auth/jwt.py` | Centralized JWT generation, validation, and password hashing utility functions. |
+| `engine/api/middleware/auth.py` | Upgraded to handle dual-token auth (JWTs starting with `ey` and API Keys starting with `sf_`). Validates the `X-Tenant-ID` header for JWTs to bind context. |
+| `engine/api/routes/auth.py` | Built `/auth/register` and `/auth/token` (OAuth2 compatible) endpoints for the frontend dashboard to use. |
+| `engine/api/main.py` | Registered the new `auth.router`. |
+
+### Architecture Decisions (Phase 17)
+- **Local Hashing over External Auth**: Chose to use local Postgres `User` tables and `passlib[bcrypt]` rather than relying on Firebase/Auth0 per user preference.
+- **Dual Authentication Tracks**: The API is now truly unified. The Frontend dashboard can send a Bearer JWT, while CI/CD pipelines send a Bearer API Key. The middleware standardizes both into a unified `request.state.tenant` object for downstream route handlers.
+
+---
+
+## Phase 18 — NEXT: Observability Metrics (Prometheus)
 **Will create**:
-- `users` and `tenant_members` tables.
-- Role-based access control (Admin, Developer, Viewer).
-- JWT Authentication flow (`engine/api/routes/auth.py`).
+- Expose `/api/v1/metrics` using `prometheus_client`.
+- Track request counts, error rates, and job execution durations.
 
 ---
 
@@ -530,6 +548,7 @@ A comprehensive architectural review of the codebase identified that while the C
 | 17  | Continue → Phase 14 Correlation IDs                                 | ✅ Done |
 | 18  | Continue → Phase 15 Redis Event Bus                                 | ✅ Done |
 | 19  | Continue → Phase 16 Rate Limiter                                    | ✅ Done |
+| 20  | Continue → Phase 17 RBAC                                            | ✅ Done |
 
 ---
 
