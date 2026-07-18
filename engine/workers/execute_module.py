@@ -265,6 +265,8 @@ async def _execute_async(
             clean_artifacts = [{"file_name": a.file_name} for a in module_result.artifacts]
             safe_output = dict(module_result.output)
             safe_output["_artifacts"] = clean_artifacts
+            if module_result.sandbox_logs:
+                safe_output["_sandbox_logs"] = module_result.sandbox_logs
 
             await result_service.on_worker_completed(
                 job_id=job_id,

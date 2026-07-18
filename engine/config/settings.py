@@ -107,6 +107,17 @@ class ViaSocketSettings(BaseSettings):
     retry_backoff_base: float = Field(default=2.0)
 
 
+class SandboxSettings(BaseSettings):
+    """Sandbox execution environment settings."""
+
+    model_config = SettingsConfigDict(env_prefix="SANDBOX_", extra="ignore")
+
+    endpoint_url: str = Field(default="http://localhost:8080")
+    api_key: str = Field(default="sandbox-dev-key")
+    timeout_seconds: int = Field(default=30)
+    max_memory_mb: int = Field(default=512)
+
+
 class SecuritySettings(BaseSettings):
     """Security and API key settings."""
 
@@ -155,6 +166,7 @@ class Settings(BaseSettings):
     github: GitHubSettings = Field(default_factory=GitHubSettings)
     viasocket: ViaSocketSettings = Field(default_factory=ViaSocketSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
+    sandbox: SandboxSettings = Field(default_factory=SandboxSettings)
 
     @property
     def is_production(self) -> bool:

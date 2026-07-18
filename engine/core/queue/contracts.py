@@ -49,6 +49,10 @@ class ModuleResult(BaseModel):
         default_factory=list,
         description="List of raw artifacts to upload to MinIO and persist",
     )
+    sandbox_logs: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Optional list of sandbox execution results (stdout, stderr, exit code)",
+    )
     error: str | None = Field(
         default=None,
         description="Error description — populated when status is failed or partial",
