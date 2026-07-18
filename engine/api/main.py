@@ -67,6 +67,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Connect distributed EventBus
     from engine.core.events import event_bus
     await event_bus.connect()
+    
+    # Start Background Scheduler
+    from engine.core.scheduler import run_scheduler
+    scheduler_task = asyncio.create_task(run_scheduler())
 
     yield  # Application is running
 
@@ -77,6 +81,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     
     # Disconnect EventBus
     await event_bus.disconnect()
+    
+    # Cancel Scheduler
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        pass
 
     from engine.config.database import engine
     await engine.dispose()

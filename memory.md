@@ -404,8 +404,8 @@ A comprehensive architectural review of the codebase identified that while the C
 | 15 | Redis Streams Event Bus | ✅ DONE |
 | 16 | Rate Limiter | ✅ DONE |
 | 17 | RBAC | ✅ DONE |
-| 18 | Observability | ⬜ NEXT |
-| 19 | Feature Flags | ⬜ PENDING |
+| 18 | Observability | ✅ DONE |
+| 19 | Feature Flags | ⬜ NEXT |
 | 20 | Subscription Plans | ⬜ PENDING |
 | 21 | Cache Layer | ⬜ PENDING |
 | 22 | Scheduler | ⬜ PENDING |
@@ -483,10 +483,24 @@ A comprehensive architectural review of the codebase identified that while the C
 
 ---
 
-## Phase 18 — NEXT: Observability Metrics (Prometheus)
+## Phase 18 — COMPLETED ✅ (Observability Metrics - Prometheus)
+
+### Files Modified
+| File | Purpose |
+|---|---|
+| `pyproject.toml` | Added `prometheus-client` dependency. |
+| `engine/api/middleware/metrics.py` | Built `MetricsMiddleware` to track `http_requests_total` and `http_request_duration_seconds` using Prometheus primitives. |
+| `engine/api/routes/metrics.py` | Added the `/api/v1/metrics` endpoint to expose the raw metrics payload to scrapers (hidden from OpenAPI schema). |
+| `engine/api/main.py` | Registered the middleware and router. |
+
+### Architecture Decisions (Phase 18)
+- **High-Cardinality Protection**: By grouping metrics around the registered `route.path` (e.g. `/api/v1/jobs/{job_id}`) instead of the raw URL (e.g. `/api/v1/jobs/123`), we prevent cardinality explosions that would otherwise crash the Prometheus server.
+
+---
+
+## Phase 19 — NEXT: Feature Flags
 **Will create**:
-- Expose `/api/v1/metrics` using `prometheus_client`.
-- Track request counts, error rates, and job execution durations.
+- Enterprise feature flagging (e.g., enable/disable `notebook_to_blog` module globally or per-tenant).
 
 ---
 
@@ -549,6 +563,7 @@ A comprehensive architectural review of the codebase identified that while the C
 | 18  | Continue → Phase 15 Redis Event Bus                                 | ✅ Done |
 | 19  | Continue → Phase 16 Rate Limiter                                    | ✅ Done |
 | 20  | Continue → Phase 17 RBAC                                            | ✅ Done |
+| 21  | Continue → Phase 18 Observability                                   | ✅ Done |
 
 ---
 
