@@ -58,7 +58,7 @@ infra/alembic/__pycache__/
 # Logs
 *.log
 logs/
-
+.node_modules
 # OS
 .DS_Store
 Thumbs.db
@@ -66,5 +66,7 @@ Thumbs.db
 # Docker override (local-only overrides)
 docker-compose.override.yml
 
-# Frontend (Excluded per user request)
-
+# Frontend
+node_modules/
+dist/
+.env.production
