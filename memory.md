@@ -1,6 +1,6 @@
 # ShipFaster Dev 3 (Backend) — Memory & Context
 
-_Last Updated: Phase 6 Complete_
+_Last Updated: Phase 7 Complete_
 
 ---
 
@@ -80,8 +80,8 @@ Presentation (FastAPI routes)
 | 4 | Celery queue + workers | ✅ DONE |
 | 5 | LLM client wrapper (Gemini-only) | ✅ DONE |
 | 6 | Webhook intake (GitHub/CI) | ✅ DONE |
-| 7 | viaSocket dispatch | ⬜ NEXT |
-| 8 | Artifact storage (MinIO) | ⬜ PENDING |
+| 7 | viaSocket dispatch | ✅ DONE |
+| 8 | Artifact storage (MinIO) | ⬜ NEXT |
 | 9 | Sandbox executor | ⬜ PENDING |
 | 10 | Event system | ⬜ PENDING |
 | 11 | Analytics & observability | ⬜ PENDING |
@@ -241,13 +241,35 @@ Presentation (FastAPI routes)
 
 ---
 
-## Phase 7 — NEXT: viaSocket Dispatch
+## Phase 7 — COMPLETED ✅ (viaSocket Dispatch)
+
+### Files Created
+| File | Purpose |
+|---|---|
+| `engine/core/viasocket/contracts.py` | Strict outbound Pydantic schema (`ViaSocketPayload`) |
+| `engine/core/viasocket/client.py` | Synchronous HTTP client (`urllib.request`) for Celery worker |
+| `engine/core/viasocket/service.py` | DB persistence for `ViaSocketDispatch` audit log with retry states |
+| `engine/workers/viasocket_dispatcher.py` | Dedicated low-priority Celery task for async dispatching |
+| `engine/core/viasocket/__init__.py` | Package exports |
+
+### Integration Points
+- **`execute_module.py`**: Automatically enqueues the dispatch task if a module succeeds and doesn't require approval.
+- **`engine/core/jobs/service.py`**: `_trigger_post_approval_dispatch` enqueues the dispatch task instantly when a user hits `/approve`.
+
+### Architecture Decisions (Phase 7)
+- **Async Execution**: The HTTP POST never blocks the main AI worker (`execute_module.py`); it fires a separate Celery task.
+- **Built-in Retries**: Leverages Celery's exponential backoff (`task.retry`) instead of implementing a custom polling loop.
+- **Full DB Audit**: `viasocket_dispatches` table tracks the raw payload, URL, HTTP status code, and `attempt_count` for perfect observability.
+
+---
+
+## Phase 8 — NEXT: Artifact Storage (MinIO)
 **Will create**:
-- `engine/core/viasocket/contracts.py` — Schema for the outbound payload (`{event, tenant_id, job_id, data}`).
-- `engine/core/viasocket/client.py` — Resilient HTTP client (with retry/timeout).
-- `engine/workers/viasocket_dispatcher.py` — Async Celery task to send webhooks without blocking main queue.
-- `engine/core/viasocket/service.py` — Orchestrates tracking in `ViaSocketDispatch` DB model.
-- **Integration**: Update `execute_module.py` (from Phase 4) to trigger this task on job success.
+- `engine/core/storage/client.py` — S3/MinIO wrapper using `boto3` or `minio` python client
+- `engine/core/storage/service.py` — High-level API for uploading artifacts
+- `engine/core/artifacts/repository.py` — DB ops for the `Artifact` table
+- `engine/api/routes/artifacts.py` — `GET /api/v1/artifacts/{id}/download` route (generates presigned URLs)
+- Update `execute_module.py` / `contracts.py` to persist generated files as Artifact records and push to MinIO.
 
 ---
 
@@ -261,6 +283,7 @@ Presentation (FastAPI routes)
 | 5   | Continue → Phase 4 Celery Queue + Workers + Job API                 | ✅ Done |
 | 6   | Continue → Phase 5 LLM Client Wrapper (Gemini-only)                 | ✅ Done |
 | 7   | Continue → Phase 6 Webhook Intake (GitHub/CI)                       | ✅ Done |
+| 8   | Continue → Phase 7 viaSocket Dispatch                               | ✅ Done |
 
 ---
 

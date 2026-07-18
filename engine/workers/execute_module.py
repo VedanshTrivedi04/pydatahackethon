@@ -252,6 +252,19 @@ async def _execute_async(
                     job_id=str(job_id),
                     module=module_name,
                 )
+            elif module_result.status == "success":
+                # Fire viaSocket dispatch directly
+                celery_app.send_task(
+                    "engine.workers.viasocket_dispatcher.dispatch_webhook",
+                    kwargs={
+                        "job_id": str(job_id),
+                        "tenant_id": str(tenant_id),
+                        "event_name": "job_completed",
+                        "module": module_name,
+                        "data": module_result.output or {},
+                    },
+                    queue="shipfaster.low",
+                )
 
             await result_session.commit()
 

@@ -516,16 +516,21 @@ class JobService:
     async def _trigger_post_approval_dispatch(self, job: Job) -> None:
         """
         Trigger viaSocket dispatch after a job is approved.
-
-        This is a stub — the actual viaSocket service is wired in Phase 7.
-        The stub logs the intent so the approval flow is testable now.
-
-        Args:
-            job: The approved job.
         """
         logger.info(
             "job.dispatch_triggered",
             job_id=str(job.id),
             module=job.module,
-            note="viaSocket dispatch will be wired in Phase 7",
+        )
+        from engine.core.queue.celery_app import celery_app
+        celery_app.send_task(
+            "engine.workers.viasocket_dispatcher.dispatch_webhook",
+            kwargs={
+                "job_id": str(job.id),
+                "tenant_id": str(job.tenant_id),
+                "event_name": "job_approved",
+                "module": job.module,
+                "data": job.result or {},
+            },
+            queue="shipfaster.low",
         )
