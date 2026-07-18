@@ -1,6 +1,6 @@
 # ShipFaster Dev 3 (Backend) — Memory & Context
 
-_Last Updated: Phase 5 Complete_
+_Last Updated: Phase 6 Complete_
 
 ---
 
@@ -79,8 +79,8 @@ Presentation (FastAPI routes)
 | 3 | Core FastAPI app + routes (stubs) | ✅ DONE (with Phase 2) |
 | 4 | Celery queue + workers | ✅ DONE |
 | 5 | LLM client wrapper (Gemini-only) | ✅ DONE |
-| 6 | Webhook intake (GitHub/CI) | ⬜ NEXT |
-| 7 | viaSocket dispatch | ⬜ PENDING |
+| 6 | Webhook intake (GitHub/CI) | ✅ DONE |
+| 7 | viaSocket dispatch | ⬜ NEXT |
 | 8 | Artifact storage (MinIO) | ⬜ PENDING |
 | 9 | Sandbox executor | ⬜ PENDING |
 | 10 | Event system | ⬜ PENDING |
@@ -220,25 +220,47 @@ Presentation (FastAPI routes)
 
 ---
 
-## Phase 6 — NEXT: Webhook Intake (GitHub/CI)
+## Phase 6 — COMPLETED ✅ (Webhook Intake)
+
+### Files Created
+| File | Purpose |
+|---|---|
+| `engine/api/schemas/webhook.py` | Payload definitions (e.g., extracting GitHub installation ID) |
+| `engine/core/webhooks/security.py` | HMAC SHA-256 signature validation matching GitHub's algorithm |
+| `engine/core/webhooks/repository.py` | `WebhookRepository` with store-first and deduplication logic |
+| `engine/core/webhooks/service.py` | Resolves tenant by `installation_id`, persists event, creates `Job` |
+| `engine/core/webhooks/__init__.py` | Package exports |
+| `engine/api/routes/webhooks.py` | `POST /api/v1/webhooks/github` — no auth, relies on HMAC signature |
+| `engine/api/main.py` | Registered webhook router |
+
+### Architecture Decisions (Phase 6)
+- **Store-First Pattern**: `WebhookEvent` raw JSON is persisted BEFORE any business logic runs (for audit/replay).
+- **Idempotency**: Checked against `X-GitHub-Delivery` ID via DB constraint / query.
+- **Tenant Resolution**: Instead of an API key, tenants are identified by mapping the webhook's `installation.id` to `Tenant.github_app_installation_id`.
+- **Automatic Job Enqueueing**: Built basic event-to-module mapping (e.g., `pull_request` -> `test_generator`) that automatically enqueues a Celery job.
+
+---
+
+## Phase 7 — NEXT: viaSocket Dispatch
 **Will create**:
-- `engine/api/schemas/webhook.py` — Webhook payload models
-- `engine/core/webhooks/security.py` — GitHub HMAC signature validation
-- `engine/core/webhooks/repository.py` — DB ops for `webhook_events` (store-first pattern)
-- `engine/core/webhooks/service.py` — Service to validate, persist, and enqueue jobs
-- `engine/api/routes/webhooks.py` — Public POST route for GitHub
+- `engine/core/viasocket/contracts.py` — Schema for the outbound payload (`{event, tenant_id, job_id, data}`).
+- `engine/core/viasocket/client.py` — Resilient HTTP client (with retry/timeout).
+- `engine/workers/viasocket_dispatcher.py` — Async Celery task to send webhooks without blocking main queue.
+- `engine/core/viasocket/service.py` — Orchestrates tracking in `ViaSocketDispatch` DB model.
+- **Integration**: Update `execute_module.py` (from Phase 4) to trigger this task on job success.
 
 ---
 
 ## Prompt Log / History
-| # | Prompt Summary | Status |
-|---|---|---|
-| 1 | Initialize GitHub repo + push markdown files | ✅ Done |
-| 2 | Analyze handover docs + create memory.md | ✅ Done |
-| 3 | Full architecture setup — divide into phases, start with Phase 1 DB | ✅ Done |
-| 4 | Continue → Phase 2 Auth + Multi-Tenancy + FastAPI bootstrap | ✅ Done |
-| 5 | Continue → Phase 4 Celery Queue + Workers + Job API | ✅ Done |
-| 6 | Continue → Phase 5 LLM Client Wrapper (Gemini-only) | ✅ Done |
+| #   | Prompt Summary                                                      | Status |
+| -----| ---------------------------------------------------------------------| --------|
+| 1   | Initialize GitHub repo + push markdown files                        | ✅ Done |
+| 2   | Analyze handover docs + create memory.md                            | ✅ Done |
+| 3   | Full architecture setup — divide into phases, start with Phase 1 DB | ✅ Done |
+| 4   | Continue → Phase 2 Auth + Multi-Tenancy + FastAPI bootstrap         | ✅ Done |
+| 5   | Continue → Phase 4 Celery Queue + Workers + Job API                 | ✅ Done |
+| 6   | Continue → Phase 5 LLM Client Wrapper (Gemini-only)                 | ✅ Done |
+| 7   | Continue → Phase 6 Webhook Intake (GitHub/CI)                       | ✅ Done |
 
 ---
 

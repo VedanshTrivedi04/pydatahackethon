@@ -26,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from engine.api.exceptions.handlers import register_exception_handlers
 from engine.api.middleware.auth import AuthMiddleware
 from engine.api.middleware.logging import RequestLoggingMiddleware
-from engine.api.routes import health, tenants, jobs
+from engine.api.routes import health, tenants, jobs, webhooks
 from engine.config.settings import get_settings
 from engine.utils.logging import configure_logging, get_logger
 
@@ -138,6 +138,7 @@ def create_application() -> FastAPI:
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(tenants.router, prefix=API_PREFIX)
     app.include_router(jobs.router, prefix=API_PREFIX)
+    app.include_router(webhooks.router, prefix=API_PREFIX)
 
     # Placeholder routers for Phase 3+ (will be uncommented as built):
     # app.include_router(jobs.router, prefix=API_PREFIX)
