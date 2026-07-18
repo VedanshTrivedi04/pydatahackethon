@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { Job, JobFilters, PaginatedJobsResponse, ModuleType } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://pydatahackethon-37cm.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://handcuff-dweller-crimp.ngrok-free.dev';
 
 // Helper to get or set tenant API key in localStorage
 export const getTenantApiKey = (): string => {
