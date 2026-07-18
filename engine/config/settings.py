@@ -76,13 +76,12 @@ class MinIOSettings(BaseSettings):
 
 
 class LLMSettings(BaseSettings):
-    """LLM provider settings."""
+    """LLM provider settings (Gemini only)."""
 
     model_config = SettingsConfigDict(env_prefix="LLM_", extra="ignore")
 
-    google_api_key: str = Field(default="")
-    anthropic_api_key: str = Field(default="")
-    default_model: str = Field(default="gemini-1.5-pro")
+    gemini_api_key: str = Field(default="")
+    default_model: str = Field(default="gemini-2.5-flash")
     max_retries: int = Field(default=3)
     timeout_seconds: int = Field(default=120)
     max_tokens: int = Field(default=8192)

@@ -1,6 +1,6 @@
 # ShipFaster Dev 3 (Backend) — Memory & Context
 
-_Last Updated: Phase 4 Complete_
+_Last Updated: Phase 5 Complete_
 
 ---
 
@@ -78,8 +78,8 @@ Presentation (FastAPI routes)
 | 2 | Auth + Multi-tenancy service layer | ✅ DONE |
 | 3 | Core FastAPI app + routes (stubs) | ✅ DONE (with Phase 2) |
 | 4 | Celery queue + workers | ✅ DONE |
-| 5 | LLM client wrapper | ⬜ NEXT |
-| 6 | Webhook intake (GitHub/CI) | ⬜ PENDING |
+| 5 | LLM client wrapper (Gemini-only) | ✅ DONE |
+| 6 | Webhook intake (GitHub/CI) | ⬜ NEXT |
 | 7 | viaSocket dispatch | ⬜ PENDING |
 | 8 | Artifact storage (MinIO) | ⬜ PENDING |
 | 9 | Sandbox executor | ⬜ PENDING |
@@ -197,12 +197,36 @@ Presentation (FastAPI routes)
 
 ---
 
-## Phase 5 — NEXT: LLM Client Wrapper
+## Phase 5 — COMPLETED ✅ (Gemini-Only Architecture)
+
+### Files Created
+| File | Purpose |
+|---|---|
+| `engine/core/llm/client.py` | Single entry point for `LLMClient` — uses `google.genai` SDK |
+| `engine/core/llm/types.py` | Value objects: `LLMCallResult`, `LLMGenerationConfig` |
+| `engine/core/llm/pricing.py` | Cost tables for Gemini 2.5 Flash, 2.5 Pro, 2.0 Flash, 1.5 Flash |
+| `engine/core/llm/usage_tracker.py` | `LLMUsageTracker` for cost analytics and cap enforcement |
+| `engine/core/llm/__init__.py` | Easy exports for Dev 1 |
+| `engine/config/settings.py` | Updated `LLMSettings` to explicitly use `gemini_api_key` |
+
+### Architecture Decisions (Phase 5)
+- **Gemini Only**: Dropped Claude fallback to simplify the architecture. Primary model is `gemini-2.5-flash`.
+- **Async Native**: Uses the new `client.aio.models.generate_content`.
+- **Tenacity Retries**: Exponential backoff (2-30s) + jitter on 429s and 5xxs. No retries on 400s.
+- **Cost Calculation**: Centralized cost calculation (input, output, and thinking tokens).
+- **Auto-Persistence**: Passing `session` to `generate()` automatically writes to `llm_usage`.
+- **Thinking Budget**: Full support for configuring Gemini 2.5 thinking budgets.
+- **Structured Output**: `generate_json()` forces `application/json` response MIME type.
+
+---
+
+## Phase 6 — NEXT: Webhook Intake (GitHub/CI)
 **Will create**:
-- `engine/core/llm/client.py` — Centralized Gemini/Claude wrapper with retry + fallback
-- `engine/core/llm/usage_tracker.py` — Token + cost tracking, persists to llm_usage table
-- `engine/core/llm/pricing.py` — Model pricing table for cost estimation
-- `engine/core/llm/retry.py` — Tenacity-based retry with exponential backoff
+- `engine/api/schemas/webhook.py` — Webhook payload models
+- `engine/core/webhooks/security.py` — GitHub HMAC signature validation
+- `engine/core/webhooks/repository.py` — DB ops for `webhook_events` (store-first pattern)
+- `engine/core/webhooks/service.py` — Service to validate, persist, and enqueue jobs
+- `engine/api/routes/webhooks.py` — Public POST route for GitHub
 
 ---
 
@@ -214,6 +238,7 @@ Presentation (FastAPI routes)
 | 3 | Full architecture setup — divide into phases, start with Phase 1 DB | ✅ Done |
 | 4 | Continue → Phase 2 Auth + Multi-Tenancy + FastAPI bootstrap | ✅ Done |
 | 5 | Continue → Phase 4 Celery Queue + Workers + Job API | ✅ Done |
+| 6 | Continue → Phase 5 LLM Client Wrapper (Gemini-only) | ✅ Done |
 
 ---
 
