@@ -130,10 +130,12 @@ def create_application() -> FastAPI:
     # -------------------------------------------------------------------
 
     # 1. CORS — must be outermost
+    # Allow all origins for dev tunnels (ngrok/cloudflare) and deployed frontend
+    # Credentials are False because we use stateless Bearer tokens
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=True,
+        allow_origins=["*"],
+        allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Correlation-ID"],
         expose_headers=["X-Request-ID", "X-Correlation-ID"],

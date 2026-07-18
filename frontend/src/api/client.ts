@@ -1,11 +1,24 @@
 /// <reference types="vite/client" />
 import { Job, JobFilters, PaginatedJobsResponse, ModuleType } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://handcuff-dweller-crimp.ngrok-free.dev';
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = rawBaseUrl.replace(/['"]/g, '');
+
+// Real credentials - auto-set on load
+const REAL_API_KEY = 'sf_2314922a84f1f04209f3040f302bed7d98e545b4350850c1dd4455c809b1387b';
+const REAL_TENANT_ID = 'd3c89532-fa95-4e6b-a5d1-cbdb6628039e';
+
+// Auto-initialize real credentials if not set or if they are still mock values
+if (!localStorage.getItem('shipfaster_api_key') || localStorage.getItem('shipfaster_api_key') === 'demo_tenant_key_12345') {
+  localStorage.setItem('shipfaster_api_key', REAL_API_KEY);
+}
+if (!localStorage.getItem('shipfaster_tenant_id') || localStorage.getItem('shipfaster_tenant_id') === 'tenant_demo_01') {
+  localStorage.setItem('shipfaster_tenant_id', REAL_TENANT_ID);
+}
 
 // Helper to get or set tenant API key in localStorage
 export const getTenantApiKey = (): string => {
-  return localStorage.getItem('shipfaster_api_key') || 'demo_tenant_key_12345';
+  return localStorage.getItem('shipfaster_api_key') || REAL_API_KEY;
 };
 
 export const setTenantApiKey = (key: string): void => {
@@ -13,7 +26,7 @@ export const setTenantApiKey = (key: string): void => {
 };
 
 export const getTenantId = (): string => {
-  return localStorage.getItem('shipfaster_tenant_id') || 'tenant_demo_01';
+  return localStorage.getItem('shipfaster_tenant_id') || REAL_TENANT_ID;
 };
 
 export const setTenantId = (id: string): void => {
@@ -225,6 +238,29 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 }
 
+// Translate backend model (id, jobs) to frontend model (job_id, items)
+function mapBackendJob(backendJob: any): Job {
+  if (!backendJob) return null as any;
+  return {
+    job_id: backendJob.id || backendJob.job_id,
+    tenant_id: backendJob.tenant_id,
+    module: backendJob.module,
+    status: backendJob.status === 'approval_pending' ? 'partial' : backendJob.status,
+    created_at: backendJob.created_at,
+    updated_at: backendJob.updated_at,
+    payload: backendJob.payload || {},
+    result: backendJob.result ? {
+      status: backendJob.result.status || backendJob.status,
+      output: backendJob.result.output || {},
+      artifacts: backendJob.result.artifacts || [],
+      error: backendJob.result.error || null,
+    } : undefined,
+    approved: backendJob.status === 'approved',
+    rejected: backendJob.status === 'rejected',
+    rejection_feedback: backendJob.approval_note || undefined,
+  };
+}
+
 // Local mock execution handler to ensure smooth, zero-latency demos even without live backend
 function handleMockRequest<T>(endpoint: string, options: RequestInit): T {
   // GET /api/v1/jobs or /api/v1/jobs?module=...
@@ -326,11 +362,32 @@ export const jobsApi = {
     if (filters?.status && filters.status !== 'all') params.append('status', filters.status);
     
     const query = params.toString();
-    return request<PaginatedJobsResponse>(`/api/v1/jobs${query ? `?${query}` : ''}`);
+    const res = await request<any>(`/api/v1/jobs${query ? `?${query}` : ''}`);
+    
+    // If fallback mock response (contains items directly)
+    if (res && res.items) {
+      return res as PaginatedJobsResponse;
+    }
+    
+    // If backend response, extract and map
+    const jobsList = res && res.jobs ? res.jobs : (res && res.data && res.data.jobs ? res.data.jobs : []);
+    const total = res && typeof res.total === 'number' ? res.total : 0;
+    
+    return {
+      items: jobsList.map(mapBackendJob),
+      total: total,
+      page: 1,
+      size: 50
+    };
   },
 
   getJob: async (jobId: string): Promise<Job> => {
-    return request<Job>(`/api/v1/jobs/${jobId}`);
+    const res = await request<any>(`/api/v1/jobs/${jobId}`);
+    if (res && res.job_id) {
+      return res as Job;
+    }
+    const rawJob = res && res.job ? res.job : (res && res.data && res.data.job ? res.data.job : res);
+    return mapBackendJob(rawJob);
   },
 
   approveJob: async (jobId: string): Promise<{ approved: boolean; message: string }> => {
@@ -347,9 +404,14 @@ export const jobsApi = {
   },
 
   createDemoJob: async (module: ModuleType, payload: Record<string, any>): Promise<Job> => {
-    return request<Job>(`/api/v1/jobs`, {
+    const res = await request<any>(`/api/v1/jobs`, {
       method: 'POST',
       body: JSON.stringify({ module, payload }),
     });
+    if (res && res.job_id) {
+      return res as Job;
+    }
+    const rawJob = res && res.job ? res.job : (res && res.data && res.data.job ? res.data.job : res);
+    return mapBackendJob(rawJob);
   },
 };

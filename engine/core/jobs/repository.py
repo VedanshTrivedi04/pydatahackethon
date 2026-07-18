@@ -205,7 +205,7 @@ class JobRepository:
         stmt = (
             update(Job)
             .where(Job.id == job_id)
-            .values(status="running", started_at=datetime.now(timezone.utc))
+            .values(status="running", started_at=datetime.now(timezone.utc).replace(tzinfo=None))
         )
         await self._session.execute(stmt)
 
@@ -227,7 +227,7 @@ class JobRepository:
         """
         values: dict[str, Any] = {
             "status": status,
-            "completed_at": datetime.now(timezone.utc),
+            "completed_at": datetime.now(timezone.utc).replace(tzinfo=None),
         }
         if result is not None:
             values["result"] = result
