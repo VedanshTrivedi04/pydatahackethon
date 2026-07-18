@@ -133,6 +133,10 @@ def create_application() -> FastAPI:
     # 3. Auth — resolves tenant from Bearer token (soft — does not block)
     app.add_middleware(AuthMiddleware)
 
+    # 4. Rate Limiting — enforces limits based on resolved tenant or IP
+    from engine.api.middleware.rate_limiter import RateLimiterMiddleware
+    app.add_middleware(RateLimiterMiddleware)
+
     # -------------------------------------------------------------------
     # Exception Handlers
     # -------------------------------------------------------------------

@@ -401,8 +401,8 @@ A comprehensive architectural review of the codebase identified that while the C
 |---|---|---|
 | 13.5 | Foundation Hardening | ✅ DONE |
 | 14 | Correlation IDs | ✅ DONE |
-| 15 | Redis Streams Event Bus | ⬜ NEXT |
-| 16 | Rate Limiter | ⬜ PENDING |
+| 15 | Redis Streams Event Bus | ✅ DONE |
+| 16 | Rate Limiter | ⬜ NEXT |
 | 17 | RBAC | ⬜ PENDING |
 | 18 | Observability | ⬜ PENDING |
 | 19 | Feature Flags | ⬜ PENDING |
@@ -435,10 +435,24 @@ A comprehensive architectural review of the codebase identified that while the C
 
 ---
 
-## Phase 15 — NEXT: Distributed Event Bus (Redis)
+## Phase 15 — COMPLETED ✅ (Distributed Event Bus - Redis)
+
+### Files Modified
+| File | Purpose |
+|---|---|
+| `engine/core/events/bus.py` | Completely rewrote `EventBus` to connect to Redis, publish events to `shipfaster.events`, and run an `asyncio` listener loop to trigger local subscribers. |
+| `engine/api/main.py` | Updated application `lifespan` to `await event_bus.connect()` on startup and `disconnect()` on shutdown. |
+
+### Architecture Decisions (Phase 15)
+- **Redis Pub/Sub**: Replaced the isolated in-memory event bus. Now, when a Celery worker completes a job, the event is serialized to JSON and broadcasted across Redis. Every connected FastAPI instance will receive the event instantly, allowing them to push real-time WebSocket updates to the frontend dashboard.
+- **Test Fallback**: If Redis isn't connected, the bus silently degrades back to an in-memory loop so unit tests don't break.
+
+---
+
+## Phase 16 — NEXT: API Rate Limiting
 **Will create**:
-- Upgrade `engine/core/events/bus.py` to use `redis.asyncio` for Pub/Sub.
-- Enables Fast API to subscribe to Redis channels for WebSocket broadcast.
+- Redis sliding window rate limiter middleware (`engine/api/middleware/rate_limiter.py`).
+- Protect infrastructure and LLM budgets based on tenant tiers.
 
 ---
 
@@ -498,6 +512,7 @@ A comprehensive architectural review of the codebase identified that while the C
 | 15  | Stop and perform complete architectural review + plan new phases    | ✅ Done |
 | 16  | Identify missing features (Feature flags, RBAC, etc.) + Update Roadmap | ✅ Done |
 | 17  | Continue → Phase 14 Correlation IDs                                 | ✅ Done |
+| 18  | Continue → Phase 15 Redis Event Bus                                 | ✅ Done |
 
 ---
 
