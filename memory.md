@@ -1,6 +1,6 @@
 # ShipFaster Dev 3 (Backend) — Memory & Context
 
-_Last Updated: Phase 10 Complete_
+_Last Updated: Phase 11 Complete_
 
 ---
 
@@ -84,8 +84,8 @@ Presentation (FastAPI routes)
 | 8 | Artifact storage (MinIO) | ✅ DONE |
 | 9 | Sandbox executor | ✅ DONE |
 | 10 | Event system | ✅ DONE |
-| 11 | Analytics & observability | ⬜ NEXT |
-| 12 | Structured logging | ⬜ PENDING |
+| 11 | Analytics & observability | ✅ DONE |
+| 12 | Structured logging | ⬜ NEXT |
 | 13 | Tests | ⬜ PENDING |
 
 ---
@@ -320,10 +320,26 @@ Presentation (FastAPI routes)
 
 ---
 
-## Phase 11 — NEXT: Analytics & Observability
+## Phase 11 — COMPLETED ✅ (Analytics & Observability)
+
+### Files Created
+| File | Purpose |
+|---|---|
+| `engine/api/schemas/analytics.py` | Pydantic response models for Job and LLM usage summaries. |
+| `engine/api/routes/analytics.py` | `GET /api/v1/analytics/jobs/summary` and `GET /api/v1/analytics/llm/usage`. |
+
+### Integration Points
+- Re-used `JobRepository.count_by_status` and `LLMUsageTracker.get_usage_summary` (built in Phase 5) to serve real-time metrics back to the frontend without heavy new queries.
+
+### Architecture Decisions (Phase 11)
+- **Aggregation Strategy**: Kept aggregates calculated dynamically at request time (via SQL `COUNT` and `SUM`). If the data grows massive, we would move this to materialized views, but this simple DB approach is perfect for early enterprise scale.
+
+---
+
+## Phase 12 — NEXT: Structured Logging
 **Will create**:
-- API route for a dashboard to pull aggregated job status metrics (e.g. success rate, total tokens used, jobs per module).
-- `engine/api/routes/analytics.py` for standard metrics querying.
+- Global JSON structured logger using `structlog` to replace standard Python logging.
+- Essential for pushing logs to Datadog / ELK stack for enterprise observability.
 
 ---
 
@@ -341,6 +357,7 @@ Presentation (FastAPI routes)
 | 9   | Continue → Phase 8 Artifact Storage (MinIO)                         | ✅ Done |
 | 10  | Continue → Phase 9 Sandbox Executor                                 | ✅ Done |
 | 11  | Continue → Phase 10 Event System                                    | ✅ Done |
+| 12  | Continue → Phase 11 Analytics & Observability                       | ✅ Done |
 
 ---
 
