@@ -1,6 +1,6 @@
 # ShipFaster Dev 3 (Backend) — Memory & Context
 
-_Last Updated: Phase 2 Complete_
+_Last Updated: Phase 4 Complete_
 
 ---
 
@@ -77,8 +77,8 @@ Presentation (FastAPI routes)
 | 1 | Database models + Alembic + infra setup | ✅ DONE |
 | 2 | Auth + Multi-tenancy service layer | ✅ DONE |
 | 3 | Core FastAPI app + routes (stubs) | ✅ DONE (with Phase 2) |
-| 4 | Celery queue + workers | ⬜ NEXT |
-| 5 | LLM client wrapper | ⬜ PENDING |
+| 4 | Celery queue + workers | ✅ DONE |
+| 5 | LLM client wrapper | ⬜ NEXT |
 | 6 | Webhook intake (GitHub/CI) | ⬜ PENDING |
 | 7 | viaSocket dispatch | ⬜ PENDING |
 | 8 | Artifact storage (MinIO) | ⬜ PENDING |
@@ -164,17 +164,45 @@ Presentation (FastAPI routes)
 
 ---
 
-## Phase 4 — NEXT: Celery Queue + Workers
+## Phase 4 — COMPLETED ✅
+
+### Files Created
+| File | Purpose |
+|---|---|
+| `engine/core/queue/celery_app.py` | Celery app — 4 queues (high/default/low/dlq), task routing, signal handlers |
+| `engine/core/queue/contracts.py` | `ModuleResult` — Dev1→Dev3 contract schema |
+| `engine/core/queue/__init__.py` | Queue package exports |
+| `engine/core/jobs/repository.py` | Job Repository Pattern — all SQL, paginated listing, approval flow, analytics |
+| `engine/core/jobs/service.py` | Job Service — submit (create+enqueue), lifecycle, approval, worker callbacks |
+| `engine/core/jobs/__init__.py` | Jobs package exports |
+| `engine/workers/execute_module.py` | Main Celery task — idempotency, dynamic module import, exponential backoff, DLQ |
+| `engine/workers/retry_handler.py` | DLQ handler — creates RetryQueue record + Notification on permanent failure |
+| `engine/workers/health.py` | Worker health check via control.inspect() |
+| `engine/api/schemas/job.py` | Pydantic V2 schemas — all job request/response models |
+| `engine/api/routes/jobs.py` | 8 job routes — submit, list, detail, status poll, logs, approve, reject, stats |
+| `engine/api/main.py` | Updated — jobs router registered |
+| `Makefile` | Developer convenience: make up/api/worker/migrate/seed/test |
+
+### Architecture Decisions (Phase 4)
+- **4 named queues**: high (scaffolder/test_gen) / default (docs/changelog) / low (notebook_to_blog) / dlq
+- **Module-to-queue routing**: `MODULE_QUEUE_MAP` in celery_app.py — each module goes to appropriate queue
+- **Idempotency**: Worker checks `job.status == success` before executing — safe against duplicate deliveries
+- **Dynamic import**: `MODULE_HANDLER_MAP` — if Dev 1's module doesn't exist yet, job fails gracefully (not worker crash)
+- **Exponential backoff**: 60s → 120s between retries (2 retries = 3 total attempts)
+- **DLQ routing**: After all retries, job sent to `shipfaster.dlq` + RetryQueue record + Notification created
+- **asyncio.run() bridge**: Celery is sync; modules are async. Bridge via `asyncio.run()` inside the task
+- **acks_late + reject_on_worker_lost**: At-least-once delivery with crash safety
+- **202 Accepted**: Job submit returns immediately, not 201 Created (job is async)
+- **Lightweight status poll**: Separate `GET /jobs/{id}/status` for polling without loading logs
+
+---
+
+## Phase 5 — NEXT: LLM Client Wrapper
 **Will create**:
-- `engine/core/queue/celery_app.py` — Celery app with Redis broker
-- `engine/core/queue/task_router.py` — Task routing by module type
-- `engine/workers/execute_module.py` — Main Celery task (idempotent, with retry/backoff)
-- `engine/workers/retry_handler.py` — Dead-letter queue handler
-- `engine/workers/health.py` — Worker health reporting
-- `engine/api/schemas/job.py` — Job request/response Pydantic schemas
-- `engine/api/routes/jobs.py` — Job CRUD + approve/reject endpoints
-- `engine/core/jobs/repository.py` — Job repository
-- `engine/core/jobs/service.py` — Job orchestration service
+- `engine/core/llm/client.py` — Centralized Gemini/Claude wrapper with retry + fallback
+- `engine/core/llm/usage_tracker.py` — Token + cost tracking, persists to llm_usage table
+- `engine/core/llm/pricing.py` — Model pricing table for cost estimation
+- `engine/core/llm/retry.py` — Tenacity-based retry with exponential backoff
 
 ---
 
@@ -185,6 +213,7 @@ Presentation (FastAPI routes)
 | 2 | Analyze handover docs + create memory.md | ✅ Done |
 | 3 | Full architecture setup — divide into phases, start with Phase 1 DB | ✅ Done |
 | 4 | Continue → Phase 2 Auth + Multi-Tenancy + FastAPI bootstrap | ✅ Done |
+| 5 | Continue → Phase 4 Celery Queue + Workers + Job API | ✅ Done |
 
 ---
 
