@@ -1,6 +1,6 @@
 # ShipFaster Dev 3 (Backend) — Memory & Context
 
-_Last Updated: Phase 11 Complete_
+_Last Updated: Phase 12 Complete_
 
 ---
 
@@ -85,8 +85,8 @@ Presentation (FastAPI routes)
 | 9 | Sandbox executor | ✅ DONE |
 | 10 | Event system | ✅ DONE |
 | 11 | Analytics & observability | ✅ DONE |
-| 12 | Structured logging | ⬜ NEXT |
-| 13 | Tests | ⬜ PENDING |
+| 12 | Structured logging | ✅ DONE (Built in Phase 0) |
+| 13 | Tests | ⬜ NEXT |
 
 ---
 
@@ -336,10 +336,25 @@ Presentation (FastAPI routes)
 
 ---
 
-## Phase 12 — NEXT: Structured Logging
+## Phase 12 — COMPLETED ✅ (Structured Logging)
+
+*Note: This was proactively implemented during Phase 0 (Infrastructure Setup).*
+
+### Files Created
+| File | Purpose |
+|---|---|
+| `engine/utils/logging.py` | Complete `structlog` configuration. |
+
+### Architecture Decisions (Phase 12)
+- **JSON for Production**: Automatically switches to JSON formatting (`structlog.processors.JSONRenderer()`) when `environment != development`. This means the logs are already perfectly formatted for Datadog or ELK.
+- **Context Vars**: The `bind_request_context` method injects `request_id`, `tenant_id`, and `job_id` into the thread-local context so *every* log line automatically includes them without devs needing to pass them manually.
+
+---
+
+## Phase 13 — NEXT: Tests
 **Will create**:
-- Global JSON structured logger using `structlog` to replace standard Python logging.
-- Essential for pushing logs to Datadog / ELK stack for enterprise observability.
+- Standard `pytest` suite for core utilities.
+- Test coverage for `JobService` and `LLMUsageTracker`.
 
 ---
 
@@ -358,6 +373,7 @@ Presentation (FastAPI routes)
 | 10  | Continue → Phase 9 Sandbox Executor                                 | ✅ Done |
 | 11  | Continue → Phase 10 Event System                                    | ✅ Done |
 | 12  | Continue → Phase 11 Analytics & Observability                       | ✅ Done |
+| 13  | Continue → Phase 12 Structured Logging                              | ✅ Done |
 
 ---
 
