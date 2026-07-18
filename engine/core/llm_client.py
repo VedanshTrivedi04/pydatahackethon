@@ -74,6 +74,9 @@ async def call_gemini(system: str, messages: List, api_key: str, model: str) -> 
     """
     Calls the Google Gemini API using httpx.
     """
+    if not api_key or not api_key.startswith("AIzaSy"):
+        raise ValueError("Invalid Gemini API Key format (must start with AIzaSy)")
+
     # Map model name from Claude/default to Gemini counterparts if default is passed
     if "claude" in model.lower() or model == "claude-3-5-sonnet-20241022":
         model_name = "gemini-1.5-flash"

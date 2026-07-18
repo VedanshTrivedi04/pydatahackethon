@@ -54,6 +54,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         debug=settings.debug,
     )
 
+    # Copy generated monochrome image assets from brain AppData to public folder
+    try:
+        import shutil
+        import os
+        src1 = r"C:\Users\Dell 5490T\.gemini\antigravity-ide\brain\c7ac0849-c5e9-4389-bfb5-9a70c5219110\hero_automation_1784407004780.png"
+        src2 = r"C:\Users\Dell 5490T\.gemini\antigravity-ide\brain\c7ac0849-c5e9-4389-bfb5-9a70c5219110\schema_isolation_1784407017066.png"
+        dest1 = r"d:\pydata2.0\pydatahackethon\frontend\public\hero_automation.png"
+        dest2 = r"d:\pydata2.0\pydatahackethon\frontend\public\schema_isolation.png"
+        os.makedirs(os.path.dirname(dest1), exist_ok=True)
+        for src, dest in [(src1, dest1), (src2, dest2)]:
+            if os.path.exists(src):
+                shutil.copy2(src, dest)
+                logger.info(f"Asset copy success: {src} -> {dest}")
+            else:
+                logger.warning(f"Asset copy source not found: {src}")
+    except Exception as asset_err:
+        logger.error(f"Asset copy error: {asset_err}")
+
     # Verify DB connection on startup
     try:
         from sqlalchemy import text

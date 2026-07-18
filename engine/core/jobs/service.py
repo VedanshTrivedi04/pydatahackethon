@@ -154,6 +154,10 @@ class JobService:
         correlation_id = structlog.contextvars.get_contextvars().get("correlation_id")
         headers = {"x-correlation-id": correlation_id} if correlation_id else None
 
+        # Commit the transaction so that the Celery worker (or synchronous eager task)
+        # can immediately query the Job record from the database.
+        await self._session.commit()
+
         # Enqueue to Celery
         try:
             task = celery_app.send_task(
@@ -562,3 +566,12 @@ class JobService:
             },
             queue="shipfaster.low",
         )
+
+    async def delete_job(self, job_id: uuid.UUID, tenant_id: uuid.UUID) -> None:
+        """Delete a job and its associated logs/artifacts from database."""
+        job = await self._repo.get_by_id(job_id=job_id, tenant_id=tenant_id)
+        if not job:
+            raise NotFoundError(f"Job {job_id} not found or access denied")
+            
+        await self._repo.delete(job_id=job_id)
+        await self._session.commit()

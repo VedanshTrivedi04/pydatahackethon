@@ -23,7 +23,10 @@ def save_artifact(
     otherwise falls back to saving locally under `.temp_artifacts/`.
     """
     try:
-        # Attempt to upload to MinIO
+        # Attempt to upload to MinIO unless disabled
+        if os.getenv("DISABLE_MINIO", "False").lower() in ("true", "1", "yes"):
+            raise Exception("MinIO is explicitly disabled for local demo")
+            
         client = StorageClient()
         # Clean UUID formatting if strings are passed
         s3_key = f"{tenant_id}/{job_id}/{file_name}"

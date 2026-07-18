@@ -307,3 +307,18 @@ async def reject_job(
         tenant_id=str(current_tenant.id),
     )
     return JobResponse(success=True, job=JobSchema.model_validate(job))
+
+
+@router.delete(
+    "/{job_id}",
+    summary="Delete a job",
+    description="Deletes a job from the database including its logs.",
+)
+async def delete_job(
+    job_id: uuid.UUID,
+    current_tenant: Tenant = Depends(get_current_tenant),
+    service: JobService = Depends(get_job_service),
+):
+    """Delete a job by ID."""
+    await service.delete_job(job_id=job_id, tenant_id=current_tenant.id)
+    return {"success": True, "message": f"Job {job_id} deleted successfully"}

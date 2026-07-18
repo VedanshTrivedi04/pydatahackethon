@@ -136,7 +136,10 @@ async def _execute_async(
     """
     import uuid
 
-    from engine.config.database import AsyncSessionLocal
+    from engine.config.database import AsyncSessionLocal, engine
+    # Dispose connection pool to avoid "Event loop is closed" errors when reusing connections across Celery tasks on Windows
+    await engine.dispose()
+    
     from engine.core.jobs.repository import JobRepository
     from engine.core.jobs.service import JobService
 
@@ -210,7 +213,7 @@ async def _execute_async(
             # Validate the result shape against our contract
             if isinstance(raw_result, dict):
                 module_result = ModuleResult(**raw_result)
-            elif isinstance(raw_result, ModuleResult):
+            elif hasattr(raw_result, "status") and hasattr(raw_result, "artifacts"):
                 module_result = raw_result
             else:
                 raise ValueError(
@@ -239,6 +242,25 @@ async def _execute_async(
             # Upload each artifact to MinIO and persist DB record
             for artifact_data in module_result.artifacts:
                 try:
+                    if isinstance(artifact_data, str):
+                        # The artifact is already saved in S3/Local Storage by the module!
+                        # We just need to persist the metadata record in the database.
+                        file_name = artifact_data.split("/")[-1]
+                        if "-" in file_name and len(file_name.split("-")[0]) == 8:
+                            file_name = "-".join(file_name.split("-")[1:])
+                            
+                        await artifact_service._repo.create(
+                            job_id=job_id,
+                            tenant_id=tenant_id,
+                            file_name=file_name,
+                            s3_key=artifact_data,
+                            content_type="application/octet-stream",
+                            size_bytes=0,
+                            checksum="",
+                            artifact_metadata=None,
+                        )
+                        continue
+
                     await artifact_service.upload_artifact(
                         job_id=job_id,
                         tenant_id=tenant_id,
@@ -251,7 +273,7 @@ async def _execute_async(
                     logger.error(
                         "worker.artifact_upload_failed",
                         job_id=str(job_id),
-                        file_name=artifact_data.file_name,
+                        file_name=artifact_data if isinstance(artifact_data, str) else getattr(artifact_data, "file_name", "unknown"),
                         error=str(e),
                     )
                     # We continue uploading others even if one fails,
@@ -262,11 +284,21 @@ async def _execute_async(
 
             # We strip out the raw content from the result before saving it to the Job output
             # so we don't duplicate the massive files in PostgreSQL JSONB
-            clean_artifacts = [{"file_name": a.file_name} for a in module_result.artifacts]
+            clean_artifacts = []
+            for a in module_result.artifacts:
+                if isinstance(a, str):
+                    file_name = a.split("/")[-1]
+                    if "-" in file_name and len(file_name.split("-")[0]) == 8:
+                        file_name = "-".join(file_name.split("-")[1:])
+                    clean_artifacts.append({"file_name": file_name})
+                else:
+                    clean_artifacts.append({"file_name": getattr(a, "file_name", "unknown")})
+
             safe_output = dict(module_result.output)
             safe_output["_artifacts"] = clean_artifacts
-            if module_result.sandbox_logs:
-                safe_output["_sandbox_logs"] = module_result.sandbox_logs
+            sandbox_logs = getattr(module_result, "sandbox_logs", None)
+            if sandbox_logs:
+                safe_output["_sandbox_logs"] = sandbox_logs
 
             await result_service.on_worker_completed(
                 job_id=job_id,

@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import and_, func, select, update
+from sqlalchemy import and_, func, select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -192,7 +192,7 @@ class JobRepository:
         stmt = (
             update(Job)
             .where(Job.id == job_id)
-            .values(celery_task_id=celery_task_id, status="queued")
+            .values(celery_task_id=celery_task_id)
         )
         await self._session.execute(stmt)
 
@@ -388,3 +388,8 @@ class JobRepository:
         )
         result = await self._session.execute(stmt)
         return {row[0]: row[1] for row in result.all()}
+
+    async def delete(self, job_id: uuid.UUID) -> None:
+        """Delete a job by ID from the database."""
+        stmt = delete(Job).where(Job.id == job_id)
+        await self._session.execute(stmt)

@@ -26,7 +26,12 @@ class ArtifactService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._repo = ArtifactRepository(session)
-        self._storage = StorageClient()
+        
+        import os
+        if os.getenv("DISABLE_MINIO", "False").lower() in ("true", "1", "yes"):
+            self._storage = None
+        else:
+            self._storage = StorageClient()
 
     async def upload_artifact(
         self,
@@ -62,8 +67,22 @@ class ArtifactService:
         unique_id = str(uuid.uuid4())[:8]
         s3_key = f"{tenant_id}/{job_id}/{unique_id}-{file_name}"
         
+        # Adding a short UUID prevents accidental overwrites in MinIO before DB versioning is applied
+        unique_id = str(uuid.uuid4())[:8]
+        s3_key = f"{tenant_id}/{job_id}/{unique_id}-{file_name}"
+        
         # 1. Upload to MinIO (blocking call, but acceptable for small artifacts in Celery)
-        size_bytes = self._storage.upload_file(s3_key, content_bytes, content_type)
+        if self._storage is None:
+            import os
+            from pathlib import Path
+            local_dir = Path("d:/pydata2.0/pydatahackethon/.temp_artifacts") / str(tenant_id) / str(job_id)
+            local_dir.mkdir(parents=True, exist_ok=True)
+            local_file = local_dir / f"{unique_id}-{file_name}"
+            local_file.write_bytes(content_bytes)
+            size_bytes = len(content_bytes)
+            logger.info(f"ArtifactService: Saved artifact locally: {local_file}")
+        else:
+            size_bytes = self._storage.upload_file(s3_key, content_bytes, content_type)
         
         # 2. Persist metadata to DB
         artifact = await self._repo.create(
@@ -106,7 +125,10 @@ class ArtifactService:
         if not artifact:
             raise NotFoundError(f"Artifact {artifact_id} not found")
             
-        url = self._storage.generate_presigned_url(artifact.s3_key)
+        if self._storage is None:
+            url = f"http://localhost:8000/api/v1/artifacts/mock-download/{artifact.s3_key}"
+        else:
+            url = self._storage.generate_presigned_url(artifact.s3_key)
         
         logger.info("artifact.download_url_generated", artifact_id=str(artifact_id))
         return url

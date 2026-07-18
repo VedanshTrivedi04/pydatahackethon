@@ -71,7 +71,9 @@ async def _dispatch_async(
     module: str,
     data: dict[str, Any],
 ) -> dict[str, Any]:
-    from engine.config.database import AsyncSessionLocal
+    from engine.config.database import AsyncSessionLocal, engine
+    # Dispose connection pool to avoid "Event loop is closed" errors when reusing connections across Celery tasks on Windows
+    await engine.dispose()
     from engine.core.models.tenant import Tenant
     from engine.core.viasocket.service import ViaSocketService
     from sqlalchemy import select

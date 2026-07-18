@@ -240,7 +240,16 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 // Translate backend model (id, jobs) to frontend model (job_id, items)
 function mapBackendJob(backendJob: any): Job {
-  if (!backendJob) return null as any;
+  if (!backendJob || (!backendJob.id && !backendJob.job_id)) return null as any;
+  
+  const rawResult = backendJob.result || {};
+  let mappedArtifacts: string[] = [];
+  if (backendJob.artifacts && Array.isArray(backendJob.artifacts)) {
+    mappedArtifacts = backendJob.artifacts.map((art: any) => art.file_name);
+  } else if (rawResult._artifacts && Array.isArray(rawResult._artifacts)) {
+    mappedArtifacts = rawResult._artifacts.map((art: any) => art.file_name);
+  }
+
   return {
     job_id: backendJob.id || backendJob.job_id,
     tenant_id: backendJob.tenant_id,
@@ -249,12 +258,12 @@ function mapBackendJob(backendJob: any): Job {
     created_at: backendJob.created_at,
     updated_at: backendJob.updated_at,
     payload: backendJob.payload || {},
-    result: backendJob.result ? {
-      status: backendJob.result.status || backendJob.status,
-      output: backendJob.result.output || {},
-      artifacts: backendJob.result.artifacts || [],
-      error: backendJob.result.error || null,
-    } : undefined,
+    result: {
+      status: backendJob.status,
+      output: rawResult,
+      artifacts: mappedArtifacts,
+      error: backendJob.error || null,
+    },
     approved: backendJob.status === 'approved',
     rejected: backendJob.status === 'rejected',
     rejection_feedback: backendJob.approval_note || undefined,
@@ -320,6 +329,17 @@ function handleMockRequest<T>(endpoint: string, options: RequestInit): T {
       if (job.result) job.result.status = 'failed';
     }
     return { rejected: true, job_id: jobId, feedback: body.feedback } as unknown as T;
+  }
+
+  // DELETE /api/v1/jobs/{job_id}
+  if (endpoint.startsWith('/api/v1/jobs') && options.method === 'DELETE') {
+    const parts = endpoint.split('/');
+    const jobId = parts[4];
+    const idx = MOCK_JOBS.findIndex((j) => j.job_id === jobId);
+    if (idx !== -1) {
+      MOCK_JOBS.splice(idx, 1);
+    }
+    return { success: true, message: `Job ${jobId} deleted successfully` } as unknown as T;
   }
 
   // POST /api/v1/jobs (Create sample job)
@@ -413,5 +433,26 @@ export const jobsApi = {
     }
     const rawJob = res && res.job ? res.job : (res && res.data && res.data.job ? res.data.job : res);
     return mapBackendJob(rawJob);
+  },
+
+  deleteJob: async (jobId: string): Promise<{ success: boolean; message: string }> => {
+    return request<{ success: boolean; message: string }>(`/api/v1/jobs/${jobId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+export const tenantsApi = {
+  createTenant: async (name: string, slug: string, email: string): Promise<{ tenant: any; api_key: string }> => {
+    return request<any>('/api/v1/tenants', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        slug,
+        email,
+        plan: 'free',
+        initial_key_name: 'Default Key',
+      }),
+    });
   },
 };

@@ -69,6 +69,7 @@ def create_celery_app() -> Celery:
     Returns:
         Fully configured Celery instance.
     """
+    import os
     app = Celery(
         "shipfaster",
         broker=settings.redis.url,
@@ -76,6 +77,7 @@ def create_celery_app() -> Celery:
         include=[
             "engine.workers.execute_module",
             "engine.workers.retry_handler",
+            "engine.workers.viasocket_dispatcher",
         ],
     )
 
@@ -97,7 +99,7 @@ def create_celery_app() -> Celery:
         task_acks_late=True,         # Acknowledge AFTER task completes (not before)
         task_reject_on_worker_lost=True,  # Re-queue if worker crashes mid-task
         worker_prefetch_multiplier=1,    # One task at a time per worker slot (fair dispatch)
-        task_always_eager=False,         # Never run synchronously (use celery.chord.apply in tests)
+        task_always_eager=os.getenv("CELERY_ALWAYS_EAGER", "False").lower() in ("true", "1", "yes"),
 
         # Time limits
         task_soft_time_limit=300,    # 5 min soft limit → raises SoftTimeLimitExceeded

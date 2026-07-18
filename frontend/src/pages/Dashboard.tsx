@@ -46,6 +46,16 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const handleDeleteJob = async (jobId: string) => {
+    if (!window.confirm("Are you sure you want to delete this job?")) return;
+    try {
+      await jobsApi.deleteJob(jobId);
+      refetch();
+    } catch (err: any) {
+      alert(`Error deleting job: ${err.message}`);
+    }
+  };
+
   const jobs = data?.items || [];
 
   return (
@@ -145,7 +155,11 @@ export const Dashboard: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {jobs.map((job) => (
-            <JobCard key={job.job_id} job={job} />
+            <JobCard 
+              key={job.job_id} 
+              job={job} 
+              onDelete={() => handleDeleteJob(job.job_id)}
+            />
           ))}
         </div>
       )}
