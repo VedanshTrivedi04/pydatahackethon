@@ -19,6 +19,44 @@ from engine.core.models.llm import LLMUsage
 from engine.core.models.audit import AuditLog, APILog
 from engine.core.models.notification import Notification, RetryQueue
 
+# Pydantic ModuleResult schema for Dev 1 modules
+import logging
+logger = logging.getLogger("engine.core.models")
+
+try:
+    from pydantic import BaseModel
+    HAS_PYDANTIC = True
+except ImportError:
+    logger.warning("Pydantic not found. Using custom fallback BaseModel.")
+    class BaseModel:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+        
+        def model_dump(self) -> dict:
+            return self.__dict__
+
+        def dict(self) -> dict:
+            return self.__dict__
+    HAS_PYDANTIC = False
+
+from typing import Literal, Optional, List
+
+class ModuleResult(BaseModel):
+    status: Literal["success", "failed", "partial"]
+    output: dict
+    artifacts: List[str]
+    error: Optional[str] = None
+    
+    def __init__(self, status: str, output: dict, artifacts: List[str], error: Optional[str] = None, **kwargs):
+        if HAS_PYDANTIC:
+            super().__init__(status=status, output=output, artifacts=artifacts, error=error, **kwargs)
+        else:
+            self.status = status
+            self.output = output
+            self.artifacts = artifacts
+            self.error = error
+
 __all__ = [
     "TimestampedModel",
     "User",
@@ -35,4 +73,5 @@ __all__ = [
     "APILog",
     "Notification",
     "RetryQueue",
+    "ModuleResult",
 ]

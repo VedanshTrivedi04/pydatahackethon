@@ -17,6 +17,7 @@ The OpenAPI schema is auto-generated at:
     GET /api/v1/redoc          → ReDoc UI
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 

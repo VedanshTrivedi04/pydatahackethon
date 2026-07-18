@@ -176,3 +176,7 @@ class JobStateError(ShipFasterError):
     """
     status_code = 409
     error_code = "INVALID_JOB_STATE"
+
+
+# Alias for compatibility with components importing BusinessValidationError
+BusinessValidationError = ValidationError

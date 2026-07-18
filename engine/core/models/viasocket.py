@@ -8,6 +8,7 @@ with attempt_count incremented. This gives a full retry history.
 """
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import ForeignKey, Index, Integer, String, Text
@@ -104,7 +105,7 @@ class ViaSocketDispatch(TimestampedModel):
         server_default="pending",
         comment="Dispatch status: pending | success | failed | retrying | dead_lettered",
     )
-    next_retry_at: Mapped[Any] = mapped_column(
+    next_retry_at: Mapped[datetime | None] = mapped_column(
         nullable=True,
         comment="When to attempt the next retry (NULL if no retry scheduled)",
     )

@@ -99,11 +99,18 @@ class LLMClient:
         from engine.config.settings import get_settings
         settings = get_settings()
 
-        resolved_key = api_key or settings.llm.gemini_api_key
+        import os
+        resolved_key = (
+            api_key
+            or os.getenv("LLM_GEMINI_API_KEY")
+            or os.getenv("LLM_GOOGLE_API_KEY")
+            or os.getenv("GEMINI_API_KEY")
+            or settings.llm.gemini_api_key
+        )
         if not resolved_key:
             raise LLMError(
                 "GEMINI_API_KEY is not configured. "
-                "Set GEMINI__GEMINI_API_KEY in your .env file."
+                "Please set GEMINI_API_KEY or LLM_GOOGLE_API_KEY in your .env file."
             )
 
         self._client = genai.Client(api_key=resolved_key)

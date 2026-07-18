@@ -30,12 +30,12 @@ class DatabaseSettings(BaseSettings):
     @property
     def async_url(self) -> str:
         """Async PostgreSQL connection URL."""
-        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
+        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}?sslmode=disable"
 
     @property
     def sync_url(self) -> str:
         """Sync PostgreSQL connection URL (for Alembic)."""
-        return f"postgresql+psycopg2://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
+        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}?sslmode=disable"
 
 
 class RedisSettings(BaseSettings):
@@ -161,7 +161,7 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False)
     log_level: str = Field(default="INFO")
     allowed_hosts: list[str] = Field(default=["*"])
-    cors_origins: list[str] = Field(default=["http://localhost:3000"])
+    cors_origins: list[str] = Field(default=["http://localhost:5173", "http://localhost:3000"])
 
     # --- Sandbox ---
     sandbox_enabled: bool = Field(default=True)

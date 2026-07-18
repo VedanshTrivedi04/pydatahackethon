@@ -12,6 +12,7 @@ This provides:
 """
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import Boolean, ForeignKey, Index, String, Text
@@ -103,7 +104,7 @@ class WebhookEvent(TimestampedModel):
     )
 
     # --- Timing ---
-    received_at: Mapped[Any] = mapped_column(
+    received_at: Mapped[datetime] = mapped_column(
         nullable=False,
         comment="Timestamp when the webhook request arrived",
     )
