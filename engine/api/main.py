@@ -64,12 +64,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error("shipfaster.database_connection_failed", error=str(e))
         # Don't crash on startup — let health endpoint report the issue
 
+    # Connect distributed EventBus
+    from engine.core.events import event_bus
+    await event_bus.connect()
+
     yield  # Application is running
 
     # ---------------------------------------------------------------
     # SHUTDOWN
     # ---------------------------------------------------------------
     logger.info("shipfaster.shutdown")
+    
+    # Disconnect EventBus
+    await event_bus.disconnect()
+
     from engine.config.database import engine
     await engine.dispose()
 
