@@ -149,6 +149,11 @@ class JobService:
         # Determine target queue
         queue_name = MODULE_QUEUE_MAP.get(module, "shipfaster.default")
 
+        # Extract correlation_id for distributed tracing
+        import structlog
+        correlation_id = structlog.contextvars.get_contextvars().get("correlation_id")
+        headers = {"x-correlation-id": correlation_id} if correlation_id else None
+
         # Enqueue to Celery
         try:
             task = celery_app.send_task(
@@ -162,6 +167,7 @@ class JobService:
                 queue=queue_name,
                 task_id=None,  # Let Celery generate a UUID
                 priority=10 - priority,  # Celery uses inverse priority (9=highest)
+                headers=headers,
             )
 
             # Persist the Celery task ID for tracking and idempotency

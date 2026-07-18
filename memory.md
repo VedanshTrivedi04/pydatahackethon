@@ -368,7 +368,115 @@ Presentation (FastAPI routes)
 ---
 
 ## 🚀 ROADMAP COMPLETE 🚀
-The ShipFaster backend architecture is completely built out and ready for product-level feature development!
+The initial ShipFaster backend architecture is completely built out and ready for product-level feature development!
+
+---
+
+## Architecture Audit & Enterprise Gap Analysis (Post-Phase 13)
+
+A comprehensive architectural review of the codebase identified that while the Clean Architecture foundation is solid, several critical SaaS capabilities are missing for a true production release.
+
+**Key Missing Features:**
+1. **Distributed Event Bus (Redis Streams/PubSub)**: The current `EventBus` is purely in-memory. Celery events do not reach the FastAPI server.
+2. **Distributed Tracing**: `request_id` drops at the Celery boundary. No correlation IDs.
+3. **API Rate Limiting**: The system is vulnerable to LLM cost abuse without per-tenant token bucket limiters.
+4. **Identity & RBAC**: The system uses machine API keys but lacks Human Users, Roles, and JWT Auth.
+5. **Observability**: Missing OpenTelemetry and `/metrics` for Prometheus.
+6. **Feature Flags**: Missing tier-based access toggles (e.g., Notebook disabled for Free tier).
+7. **Subscription Plans**: Missing Free/Pro/Enterprise plans with token and storage limits.
+8. **Billing Layer**: Missing integration hooks for Stripe/future billing engines.
+9. **Secret Manager**: `tenant_secrets` lacks rotation, versioning, and expiry capabilities.
+10. **API Gateway Readiness**: Missing forwarded headers, trusted proxy config, and rate limit headers.
+11. **Background Scheduler**: Celery is installed, but Celery Beat / APScheduler is missing for cron jobs (e.g., nightly backups, syncing limits).
+12. **Cache Layer**: Missing Redis caching for heavy queries (Analytics, LLM Pricing).
+13. **Search Engine**: Missing Job/Artifact/Webhook search (Elasticsearch / Postgres FTS).
+14. **Disaster Recovery & Backup Strategy**: Missing nightly DB to S3 backups and graceful fallback when Redis/MinIO goes down.
+15. **Contract Testing**: Missing API OpenAPI validation (Dev2) and `ModuleResult` strict validation (Dev1) to ensure integration day has zero surprises.
+
+---
+
+## Future Roadmap: Enterprise Readiness (Phases 13.5 - 30)
+
+| # | Phase | Status |
+|---|---|---|
+| 13.5 | Foundation Hardening | ✅ DONE |
+| 14 | Correlation IDs | ✅ DONE |
+| 15 | Redis Streams Event Bus | ⬜ NEXT |
+| 16 | Rate Limiter | ⬜ PENDING |
+| 17 | RBAC | ⬜ PENDING |
+| 18 | Observability | ⬜ PENDING |
+| 19 | Feature Flags | ⬜ PENDING |
+| 20 | Subscription Plans | ⬜ PENDING |
+| 21 | Cache Layer | ⬜ PENDING |
+| 22 | Scheduler | ⬜ PENDING |
+| 23 | Production Hardening | ⬜ PENDING |
+| 24 | CI/CD | ⬜ PENDING |
+| 25 | Backup | ⬜ PENDING |
+| 26 | Disaster Recovery | ⬜ PENDING |
+| 27 | Contract Testing | ⬜ PENDING |
+| 28 | Performance Benchmark | ⬜ PENDING |
+| 29 | Security Audit | ⬜ PENDING |
+| 30 | Production Release | ⬜ PENDING |
+
+---
+
+## Phase 14 — COMPLETED ✅ (Distributed Tracing & Correlation)
+
+### Files Modified
+| File | Purpose |
+|---|---|
+| `engine/utils/logging.py` | Added `correlation_id` to `bind_request_context` to attach to `structlog`. |
+| `engine/api/middleware/logging.py` | Extracted `X-Correlation-ID` (or generated it) and passed it to `bind_request_context`. |
+| `engine/core/jobs/service.py` | Extracted the `correlation_id` from structlog context and injected it into `celery_app.send_task(headers={"x-correlation-id": ...})`. |
+| `engine/core/queue/celery_app.py` | Intercepted Celery's `task_prerun` signal to extract the header and bind it to structlog context in the worker, then cleared it in `task_postrun`. |
+
+### Architecture Decisions (Phase 14)
+- **100% Trace Visibility**: Every single log line emitted from FastAPI *and* Celery for a specific API request will now share the exact same `correlation_id`, making debugging distributed AI workflows seamless in Datadog/ELK.
+
+---
+
+## Phase 15 — NEXT: Distributed Event Bus (Redis)
+**Will create**:
+- Upgrade `engine/core/events/bus.py` to use `redis.asyncio` for Pub/Sub.
+- Enables Fast API to subscribe to Redis channels for WebSocket broadcast.
+
+---
+
+## Phase 14 — PROPOSED: Distributed Tracing & Correlation
+**Will create**:
+- Inject `X-Correlation-ID` into Celery task headers.
+- Extract headers in worker signals to bind to `structlog` context, achieving 100% trace visibility across API and Workers.
+
+---
+
+## Phase 15 — PROPOSED: Distributed Event Bus (Redis)
+**Will create**:
+- Upgrade `engine/core/events/bus.py` to use `redis.asyncio` for Pub/Sub.
+- Enables Fast API to subscribe to Redis channels for WebSocket broadcast.
+
+---
+
+## Phase 16 — PROPOSED: API Rate Limiting
+**Will create**:
+- Redis sliding window rate limiter middleware (`engine/api/middleware/rate_limiter.py`).
+- Protect infrastructure and LLM budgets based on tenant tiers.
+
+---
+
+## Phase 17 — PROPOSED: Identity, Users & RBAC
+**Will create**:
+- `users` and `tenant_members` tables.
+- Role-based access control (Admin, Developer, Viewer).
+- JWT Authentication flow (`engine/api/routes/auth.py`).
+
+---
+
+## Phase 18 — PROPOSED: OpenTelemetry & Metrics
+**Will create**:
+- `/metrics` endpoint for Prometheus scraping.
+- Instrument FastAPI and Celery with `opentelemetry-python`.
+
+---
 
 ## Prompt Log / History
 | #   | Prompt Summary                                                      | Status |
@@ -387,6 +495,9 @@ The ShipFaster backend architecture is completely built out and ready for produc
 | 12  | Continue → Phase 11 Analytics & Observability                       | ✅ Done |
 | 13  | Continue → Phase 12 Structured Logging                              | ✅ Done |
 | 14  | Continue → Phase 13 Tests                                           | ✅ Done |
+| 15  | Stop and perform complete architectural review + plan new phases    | ✅ Done |
+| 16  | Identify missing features (Feature flags, RBAC, etc.) + Update Roadmap | ✅ Done |
+| 17  | Continue → Phase 14 Correlation IDs                                 | ✅ Done |
 
 ---
 
