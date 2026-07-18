@@ -65,3 +65,6 @@ Thumbs.db
 
 # Docker override (local-only overrides)
 docker-compose.override.yml
+
+# Frontend (Excluded per user request)
+frontend/
