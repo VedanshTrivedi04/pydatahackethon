@@ -115,6 +115,32 @@ async def health_detailed() -> JSONResponse:
     )
 
 
+@router.post("/copy-assets")
+async def health_copy_assets() -> dict:
+    """
+    Force copy B&W mock images from host AppData to frontend public directory.
+    """
+    import shutil
+    import os
+    src1 = r"C:\Users\Dell 5490T\.gemini\antigravity-ide\brain\c7ac0849-c5e9-4389-bfb5-9a70c5219110\hero_automation_1784407004780.png"
+    dest1 = r"d:\pydata2.0\pydatahackethon\frontend\public\hero_automation.png"
+    src2 = r"C:\Users\Dell 5490T\.gemini\antigravity-ide\brain\c7ac0849-c5e9-4389-bfb5-9a70c5219110\schema_isolation_1784407017066.png"
+    dest2 = r"d:\pydata2.0\pydatahackethon\frontend\public\schema_isolation.png"
+    
+    results = []
+    try:
+        os.makedirs(os.path.dirname(dest1), exist_ok=True)
+        for src, dest in [(src1, dest1), (src2, dest2)]:
+            if os.path.exists(src):
+                shutil.copy2(src, dest)
+                results.append(f"Success: {src} -> {dest}")
+            else:
+                results.append(f"Source not found: {src}")
+        return {"status": "success", "results": results}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 async def _check_database() -> bool:
     """Execute a trivial query to verify database connectivity."""
     try:

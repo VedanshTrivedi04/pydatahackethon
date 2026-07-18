@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Terminal, ShieldCheck, Key, Cpu, Sparkles, Layers, LogOut, ArrowRight, UserPlus, Info } from 'lucide-react';
-import { getTenantApiKey, setTenantApiKey, getTenantId, setTenantId, tenantsApi } from '../../api/client';
+import { getTenantApiKey, setTenantApiKey, getTenantId, setTenantId, tenantsApi, authApi } from '../../api/client';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
@@ -9,14 +9,15 @@ export const Navbar: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authTab, setAuthTab] = useState<'login' | 'signup' | 'demo'>('login');
   
-  // Login input states
-  const [loginTenantId, setLoginTenantId] = useState('');
-  const [loginApiKey, setLoginApiKey] = useState('');
+  // Login input states (JWT Email & Password)
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   
-  // Signup input states
+  // Signup input states (JWT Registration)
   const [signupName, setSignupName] = useState('');
-  const [signupSlug, setSignupSlug] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupWorkspaceName, setSignupWorkspaceName] = useState('');
   
   const [apiKey, setApiKey] = useState(getTenantApiKey());
   const [tenantId, setTenantState] = useState(getTenantId());
@@ -61,36 +62,59 @@ export const Navbar: React.FC = () => {
     window.location.href = '/';
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginTenantId || !loginApiKey) {
-      setAuthError('Please enter both Tenant ID and API Key.');
+    if (!loginEmail || !loginPassword) {
+      setAuthError('Please enter both Email and Password.');
       return;
     }
-    localStorage.setItem('shipfaster_is_logged_in', 'true');
-    setTenantApiKey(loginApiKey);
-    setTenantId(loginTenantId);
-    setShowAuthModal(false);
-    window.location.href = '/';
+    setLoading(true);
+    setAuthError(null);
+    try {
+      const res = await authApi.login(loginEmail, loginPassword);
+      if (res && res.access_token) {
+        localStorage.setItem('shipfaster_is_logged_in', 'true');
+        setTenantApiKey(res.access_token);
+        if (res.tenant_id) {
+          setTenantId(res.tenant_id);
+          setTenantState(res.tenant_id);
+        }
+        setShowAuthModal(false);
+        window.location.href = '/';
+      } else {
+        throw new Error('Authentication failed');
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Incorrect email or password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!signupEmail || !signupPassword || !signupName || !signupWorkspaceName) {
+      setAuthError('Please fill in all registration fields.');
+      return;
+    }
     setAuthError(null);
     setLoading(true);
     try {
-      const res = await tenantsApi.createTenant(signupName, signupSlug, signupEmail);
-      if (res && res.tenant && res.api_key) {
+      const res = await authApi.register(signupEmail, signupPassword, signupName, signupWorkspaceName);
+      if (res && res.access_token) {
         localStorage.setItem('shipfaster_is_logged_in', 'true');
-        setTenantApiKey(res.api_key);
-        setTenantId(res.tenant.id);
+        setTenantApiKey(res.access_token);
+        if (res.tenant_id) {
+          setTenantId(res.tenant_id);
+          setTenantState(res.tenant_id);
+        }
         setShowAuthModal(false);
         window.location.href = '/';
       } else {
         throw new Error('Invalid response from backend');
       }
     } catch (err: any) {
-      setAuthError(err.message || 'Tenant registration failed. Make sure the slug is unique and alphanumeric.');
+      setAuthError(err.message || 'Tenant registration failed. Make sure email is valid and workspace name is unique.');
     } finally {
       setLoading(false);
     }
@@ -103,30 +127,30 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <header className="glass-header sticky top-0 z-50 h-20 px-6 lg:px-12 flex items-center justify-between transition-all border-b border-neutral-900 bg-black/40 backdrop-blur-md">
+      <header className="glass-header sticky top-0 z-50 h-20 px-6 lg:px-12 flex items-center justify-between transition-all border-b border-[#1f1f1f] bg-black/40 backdrop-blur-md">
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-transform group-hover:scale-105">
-              <Cpu className="w-5 h-5 text-black" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00f0ff] to-[#7c3aed] flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.25)] transition-transform group-hover:scale-105">
+              <Cpu className="w-5 h-5 text-black animate-pulse" />
             </div>
             <div className="flex flex-col">
               <span className="font-mono font-bold text-lg tracking-tight text-white flex items-center gap-1.5">
-                ShipFaster <span className="text-white text-xs px-1.5 py-0.5 rounded bg-neutral-900 border border-neutral-800 font-normal">v1.5</span>
+                ShipFaster <span className="text-[#00f0ff] text-xs px-1.5 py-0.5 rounded bg-[#00f0ff]/10 border border-[#00f0ff]/30 font-normal font-mono">v1.5</span>
               </span>
-              <span className="text-[11px] text-neutral-500 font-mono -mt-1 tracking-wider uppercase">Agent Orchestrator</span>
+              <span className="text-[11px] text-neutral-400 font-mono -mt-1 tracking-wider uppercase">Agent Orchestrator</span>
             </div>
           </Link>
 
           {/* Navigation Links - Visible only if logged in */}
           {isLoggedIn && (
-            <nav className="hidden md:flex items-center gap-1 bg-[#0d0d0d] p-1 rounded-xl border border-neutral-850">
+            <nav className="hidden md:flex items-center gap-1 bg-[#141414] p-1 rounded-xl border border-[#1f1f1f]">
               <Link
                 to="/"
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   isActive('/') && location.pathname === '/'
-                    ? 'bg-white text-black shadow-sm'
-                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+                    ? 'bg-[#242424] text-[#00f0ff] shadow-sm'
+                    : 'text-neutral-400 hover:text-white hover:bg-[#1a1a1a]'
                 }`}
               >
                 Overview
@@ -135,8 +159,8 @@ export const Navbar: React.FC = () => {
                 to="/dashboard"
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                   isActive('/dashboard') || isActive('/jobs')
-                    ? 'bg-white text-black shadow-sm'
-                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+                    ? 'bg-[#242424] text-[#00f0ff] shadow-sm'
+                    : 'text-neutral-400 hover:text-white hover:bg-[#1a1a1a]'
                 }`}
               >
                 <Terminal className="w-4 h-4" />
@@ -146,8 +170,8 @@ export const Navbar: React.FC = () => {
                 to="/preview"
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                   isActive('/preview')
-                    ? 'bg-white text-black shadow-sm'
-                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+                    ? 'bg-[#242424] text-[#00f0ff] shadow-sm'
+                    : 'text-neutral-400 hover:text-white hover:bg-[#1a1a1a]'
                 }`}
               >
                 <Layers className="w-4 h-4" />
@@ -162,17 +186,26 @@ export const Navbar: React.FC = () => {
           {isLoggedIn ? (
             <>
               {/* Connected indicators - Visible only if logged in */}
-              <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0d0d0d] border border-neutral-850 text-xs text-neutral-300">
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+              <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#141414] border border-[#1f1f1f] text-xs text-neutral-300">
+                <span className="w-2 h-2 rounded-full bg-[#00f0ff] animate-pulse"></span>
                 <span className="font-mono">viaSocket: Connected</span>
               </div>
 
               <button
                 onClick={() => setShowConfig(!showConfig)}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#0d0d0d] hover:bg-neutral-900 border border-neutral-850 hover:border-neutral-700 text-xs font-mono text-neutral-300 hover:text-white transition-all shadow-sm"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] border border-[#1f1f1f] hover:border-[#00f0ff]/45 text-xs font-mono text-neutral-300 hover:text-white transition-all shadow-sm"
               >
-                <Key className="w-3.5 h-3.5 text-white" />
+                <Key className="w-3.5 h-3.5 text-[#00f0ff]" />
                 <span className="truncate max-w-[120px]">{tenantId}</span>
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-950/20 hover:bg-red-900/30 border border-red-500/20 hover:border-red-500/50 text-xs font-semibold text-red-400 hover:text-red-200 transition-all shadow-sm"
+                title="Logout from Workspace"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </>
           ) : (
@@ -183,7 +216,7 @@ export const Navbar: React.FC = () => {
                 setAuthTab('login');
                 setShowAuthModal(true);
               }}
-              className="px-5 py-2.5 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-bold tracking-wide transition-all shadow-[0_0_15px_rgba(255,255,255,0.15)] flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] hover:from-[#00d0df] hover:to-[#6c2ade] text-black text-xs font-bold tracking-wide transition-all shadow-[0_0_20px_rgba(0,240,255,0.25)] flex items-center gap-2"
             >
               <ShieldCheck className="w-4 h-4" />
               Sign Up / Login
@@ -195,10 +228,10 @@ export const Navbar: React.FC = () => {
       {/* Credentials Setup Popover (for logged in tenants) */}
       {showConfig && isLoggedIn && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-neutral-800 shadow-xl">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-[#00f0ff]/30 shadow-[0_0_40px_rgba(0,240,255,0.1)]">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-white" />
+                <ShieldCheck className="w-5 h-5 text-[#00f0ff]" />
                 Workspace Credentials
               </h3>
               <button
@@ -210,28 +243,28 @@ export const Navbar: React.FC = () => {
             </div>
 
             <p className="text-xs text-neutral-400 mb-6 leading-relaxed font-mono">
-              Your active tenant space: <code className="text-white bg-neutral-900 px-1.5 py-0.5 rounded">{tenantId}</code>
+              Your active tenant space: <code className="text-[#00f0ff] bg-[#1a1a1a] px-1.5 py-0.5 rounded">{tenantId}</code>
             </p>
 
             <form onSubmit={handleSaveConfig} className="space-y-4 font-mono text-sm">
               <div>
-                <label className="block text-xs uppercase tracking-wider text-neutral-500 mb-1.5 font-bold">Tenant ID</label>
-                <input
-                  type="text"
-                  value={tenantId}
-                  onChange={(e) => setTenantState(e.target.value)}
-                  className="w-full bg-[#000000] border border-neutral-850 focus:border-white rounded-xl px-3.5 py-2.5 text-white outline-none transition-colors"
+                <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Tenant ID / JWT Auth</label>
+                <textarea
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  rows={4}
+                  className="w-full bg-[#000000] border border-neutral-850 focus:border-[#00f0ff] rounded-xl px-3.5 py-2.5 text-white outline-none transition-colors font-mono text-[10px] resize-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs uppercase tracking-wider text-neutral-500 mb-1.5 font-bold">Tenant API Key</label>
+                <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Active Tenant ID</label>
                 <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="w-full bg-[#000000] border border-neutral-850 focus:border-white rounded-xl px-3.5 py-2.5 text-white outline-none transition-colors"
+                  type="text"
+                  value={tenantId}
+                  onChange={(e) => setTenantState(e.target.value)}
+                  className="w-full bg-[#000000] border border-neutral-850 focus:border-[#00f0ff] rounded-xl px-3.5 py-2.5 text-white outline-none transition-colors"
                   required
                 />
               </div>
@@ -241,13 +274,13 @@ export const Navbar: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowConfig(false)}
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-neutral-900 text-neutral-300 hover:text-white text-xs font-semibold transition-colors border border-neutral-850"
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-neutral-900 text-neutral-300 hover:text-white text-xs font-semibold transition-colors border border-neutral-800"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all shadow-md"
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-black text-xs font-bold transition-all shadow-md"
                   >
                     Save Changes
                   </button>
@@ -256,7 +289,7 @@ export const Navbar: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full mt-2 px-4 py-2.5 rounded-xl bg-transparent hover:bg-neutral-950 border border-neutral-800 hover:border-neutral-700 text-neutral-300 text-xs font-semibold transition-all flex items-center justify-center gap-2"
+                  className="w-full mt-2 px-4 py-2.5 rounded-xl bg-transparent hover:bg-red-950/20 border border-red-500/30 hover:border-red-500/50 text-red-400 text-xs font-semibold transition-all flex items-center justify-center gap-2"
                 >
                   <LogOut className="w-4 h-4" />
                   Logout from Space
@@ -265,13 +298,15 @@ export const Navbar: React.FC = () => {
             </form>
           </div>
         </div>
-      )}      {/* Guest Authentication Modal */}
+      )}
+
+      {/* Guest Authentication Modal */}
       {showAuthModal && !isLoggedIn && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-lg rounded-3xl p-8 border border-neutral-850 shadow-[0_0_50px_rgba(255,255,255,0.03)] bg-[#050505]/95 backdrop-blur-xl">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass-panel w-full max-w-lg rounded-3xl p-8 border border-neutral-800 shadow-[0_0_50px_rgba(0,240,255,0.08)] bg-[#050505]/95">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-xl font-bold text-white flex items-center gap-2.5 font-sans tracking-tight">
-                <ShieldCheck className="w-5 h-5 text-white" />
+                <ShieldCheck className="w-5 h-5 text-[#00f0ff]" />
                 Authenticate Workspace
               </h3>
               <button
@@ -287,15 +322,15 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={() => { setAuthTab('login'); setAuthError(null); }}
                 className={`flex-1 py-3 text-center transition-all duration-200 rounded-xl font-bold ${
-                  authTab === 'login' ? 'bg-white text-black shadow-md' : 'text-neutral-500 hover:text-white'
+                  authTab === 'login' ? 'bg-[#00f0ff] text-black shadow-md' : 'text-neutral-500 hover:text-white'
                 }`}
               >
-                Login (Credentials)
+                Login (JWT)
               </button>
               <button
                 onClick={() => { setAuthTab('signup'); setAuthError(null); }}
                 className={`flex-1 py-3 text-center transition-all duration-200 rounded-xl font-bold ${
-                  authTab === 'signup' ? 'bg-white text-black shadow-md' : 'text-neutral-500 hover:text-white'
+                  authTab === 'signup' ? 'bg-[#00f0ff] text-black shadow-md' : 'text-neutral-500 hover:text-white'
                 }`}
               >
                 Create Private Space
@@ -303,7 +338,7 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={() => { setAuthTab('demo'); setAuthError(null); }}
                 className={`flex-1 py-3 text-center transition-all duration-200 rounded-xl font-bold ${
-                  authTab === 'demo' ? 'bg-white text-black shadow-md' : 'text-neutral-500 hover:text-white'
+                  authTab === 'demo' ? 'bg-[#00f0ff] text-black shadow-md' : 'text-neutral-500 hover:text-white'
                 }`}
               >
                 Demo Space
@@ -311,7 +346,7 @@ export const Navbar: React.FC = () => {
             </div>
 
             {authError && (
-              <div className="p-4 mb-6 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 text-xs font-mono flex items-start gap-2.5">
+              <div className="p-4 mb-6 rounded-xl bg-red-950/20 border border-red-500/30 text-red-400 text-xs font-mono flex items-start gap-2.5">
                 <Info className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{authError}</span>
               </div>
@@ -321,32 +356,33 @@ export const Navbar: React.FC = () => {
             {authTab === 'login' && (
               <form onSubmit={handleLoginSubmit} className="space-y-5 font-mono text-xs">
                 <div>
-                  <label className="block text-[10px] tracking-widest text-neutral-500 uppercase font-semibold mb-2">Tenant Space UUID</label>
+                  <label className="block text-[10px] tracking-widest text-neutral-450 uppercase font-semibold mb-2">Email Address</label>
                   <input
-                    type="text"
-                    placeholder="e.g. d3c89532-fa95-4e6b-a5d1-cbdb6628039e"
-                    value={loginTenantId}
-                    onChange={(e) => setLoginTenantId(e.target.value.trim())}
-                    className="w-full bg-[#000000] border border-neutral-850 focus:border-white focus:ring-1 focus:ring-white rounded-xl px-4 py-3.5 text-white outline-none transition-all placeholder-neutral-700 hover:border-neutral-800"
+                    type="email"
+                    placeholder="e.g. dev@example.com"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value.trim())}
+                    className="w-full bg-[#000000] border border-neutral-850 focus:border-[#00f0ff] focus:ring-1 focus:ring-[#00f0ff] rounded-xl px-4 py-3.5 text-white outline-none transition-all placeholder-neutral-700 hover:border-neutral-800"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] tracking-widest text-neutral-500 uppercase font-semibold mb-2">API Secret Key</label>
+                  <label className="block text-[10px] tracking-widest text-neutral-450 uppercase font-semibold mb-2">Account Password</label>
                   <input
                     type="password"
-                    placeholder="Enter your tenant api key"
-                    value={loginApiKey}
-                    onChange={(e) => setLoginApiKey(e.target.value.trim())}
-                    className="w-full bg-[#000000] border border-neutral-850 focus:border-white focus:ring-1 focus:ring-white rounded-xl px-4 py-3.5 text-white outline-none transition-all placeholder-neutral-700 hover:border-neutral-800"
+                    placeholder="••••••••"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value.trim())}
+                    className="w-full bg-[#000000] border border-neutral-850 focus:border-[#00f0ff] focus:ring-1 focus:ring-[#00f0ff] rounded-xl px-4 py-3.5 text-white outline-none transition-all placeholder-neutral-700 hover:border-neutral-800"
                     required
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-4 mt-6 rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-xs tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.98]"
+                  disabled={loading}
+                  className="w-full py-4 mt-6 rounded-xl bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-black font-bold text-xs tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
                 >
-                  Connect Workspace <ArrowRight className="w-4 h-4" />
+                  {loading ? 'Authenticating...' : 'Sign In'} <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
             )}
@@ -355,43 +391,55 @@ export const Navbar: React.FC = () => {
             {authTab === 'signup' && (
               <form onSubmit={handleSignUpSubmit} className="space-y-5 font-mono text-xs">
                 <div>
-                  <label className="block text-[10px] tracking-widest text-neutral-500 uppercase font-semibold mb-2">Developer / Org Name</label>
+                  <label className="block text-[10px] tracking-widest text-neutral-450 uppercase font-semibold mb-2">Developer / Full Name</label>
                   <input
                     type="text"
-                    placeholder="e.g. My Workspace, Vedansh, Dev Team"
+                    placeholder="e.g. Vedansh Trivedi"
                     value={signupName}
                     onChange={(e) => setSignupName(e.target.value)}
-                    className="w-full bg-[#000000] border border-neutral-850 focus:border-white focus:ring-1 focus:ring-white rounded-xl px-4 py-3.5 text-white outline-none transition-all placeholder-neutral-700 hover:border-neutral-800"
+                    className="w-full bg-[#000000] border border-neutral-850 focus:border-[#00f0ff] focus:ring-1 focus:ring-[#00f0ff] rounded-xl px-4 py-3.5 text-white outline-none transition-all placeholder-neutral-700 hover:border-neutral-800"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] tracking-widest text-neutral-500 uppercase font-semibold mb-2">Workspace Slug (unique ID)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. acme-workspace (lowercase, hyphens)"
-                    value={signupSlug}
-                    onChange={(e) => setSignupSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    className="w-full bg-[#000000] border border-neutral-850 focus:border-white focus:ring-1 focus:ring-white rounded-xl px-4 py-3.5 text-white outline-none transition-all placeholder-neutral-700 hover:border-neutral-800"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] tracking-widest text-neutral-500 uppercase font-semibold mb-2">Contact Email (Optional)</label>
+                  <label className="block text-[10px] tracking-widest text-neutral-450 uppercase font-semibold mb-2">Email Address</label>
                   <input
                     type="email"
                     placeholder="e.g. dev@example.com"
                     value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    className="w-full bg-[#000000] border border-neutral-850 focus:border-white focus:ring-1 focus:ring-white rounded-xl px-4 py-3.5 text-white outline-none transition-all placeholder-neutral-700 hover:border-neutral-800"
+                    onChange={(e) => setSignupEmail(e.target.value.trim())}
+                    className="w-full bg-[#000000] border border-neutral-850 focus:border-[#00f0ff] focus:ring-1 focus:ring-[#00f0ff] rounded-xl px-4 py-3.5 text-white outline-none transition-all placeholder-neutral-700 hover:border-neutral-800"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] tracking-widest text-neutral-450 uppercase font-semibold mb-2">Password</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value.trim())}
+                    className="w-full bg-[#000000] border border-neutral-850 focus:border-[#00f0ff] focus:ring-1 focus:ring-[#00f0ff] rounded-xl px-4 py-3.5 text-white outline-none transition-all placeholder-neutral-700 hover:border-neutral-800"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] tracking-widest text-neutral-450 uppercase font-semibold mb-2">Workspace Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. My Workspace"
+                    value={signupWorkspaceName}
+                    onChange={(e) => setSignupWorkspaceName(e.target.value)}
+                    className="w-full bg-[#000000] border border-neutral-850 focus:border-[#00f0ff] focus:ring-1 focus:ring-[#00f0ff] rounded-xl px-4 py-3.5 text-white outline-none transition-all placeholder-neutral-700 hover:border-neutral-800"
+                    required
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-4 mt-6 rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-xs tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98]"
+                  className="w-full py-4 mt-6 rounded-xl bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-black font-bold text-xs tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98]"
                 >
-                  {loading ? 'Creating Private Schema...' : 'Register Workspace'} <UserPlus className="w-4 h-4" />
+                  {loading ? 'Creating Private Space...' : 'Register Workspace'} <UserPlus className="w-4 h-4" />
                 </button>
               </form>
             )}
@@ -408,7 +456,7 @@ export const Navbar: React.FC = () => {
                 </div>
                 <button
                   onClick={handleDemoLogin}
-                  className="w-full py-4 rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-xs tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.98]"
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-black font-bold text-xs tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
                   Use Live Demo Space <ArrowRight className="w-4 h-4" />
                 </button>
@@ -420,8 +468,8 @@ export const Navbar: React.FC = () => {
 
       {/* Global Success Toast */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-[#0a0a0a] border border-white text-white text-sm font-medium flex items-center gap-3 shadow-2xl animate-bounce">
-          <Sparkles className="w-4 h-4 text-white animate-pulse" />
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#00f0ff] text-white text-sm font-medium flex items-center gap-3 shadow-[0_0_20px_rgba(0,240,255,0.2)] animate-bounce">
+          <Sparkles className="w-4 h-4 text-[#00f0ff] animate-pulse" />
           <span>{toast}</span>
         </div>
       )}

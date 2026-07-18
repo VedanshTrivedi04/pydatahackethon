@@ -23,32 +23,32 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
   const config = {
     queued: {
       label: 'Queued',
-      badgeClass: 'bg-transparent text-neutral-500 border border-neutral-850',
-      icon: <Clock className={`${iconSizes} text-neutral-500`} />,
+      badgeClass: 'bg-neutral-800/80 text-neutral-300 border border-neutral-700/60',
+      icon: <Clock className={`${iconSizes} text-neutral-400`} />,
     },
     running: {
       label: 'Running',
-      badgeClass: 'bg-transparent text-white border border-white animate-pulse shadow-[0_0_15px_rgba(255,255,255,0.08)]',
-      icon: <Play className={`${iconSizes} text-white fill-white`} />,
+      badgeClass: 'bg-blue-950/70 text-blue-300 border border-blue-500/40 shadow-[0_0_12px_rgba(59,130,246,0.3)] animate-pulse',
+      icon: <Play className={`${iconSizes} text-blue-400 fill-blue-400`} />,
     },
     success: {
       label: 'Success',
-      badgeClass: 'bg-white text-black border border-white font-bold',
-      icon: <CheckCircle2 className={`${iconSizes} text-black fill-white`} />,
+      badgeClass: 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]',
+      icon: <CheckCircle2 className={`${iconSizes} text-emerald-400`} />,
     },
     failed: {
       label: 'Failed',
-      badgeClass: 'bg-transparent text-white border border-neutral-700',
-      icon: <XCircle className={`${iconSizes} text-white`} />,
+      badgeClass: 'bg-red-950/80 text-red-300 border border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.2)]',
+      icon: <XCircle className={`${iconSizes} text-red-400`} />,
     },
     partial: {
       label: 'Partial Success',
-      badgeClass: 'bg-transparent text-neutral-300 border border-neutral-700',
-      icon: <AlertTriangle className={`${iconSizes} text-neutral-300`} />,
+      badgeClass: 'bg-amber-950/80 text-amber-300 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.2)]',
+      icon: <AlertTriangle className={`${iconSizes} text-amber-400`} />,
     },
   }[status] || {
     label: status,
-    badgeClass: 'bg-transparent text-neutral-400 border border-neutral-800',
+    badgeClass: 'bg-neutral-800 text-neutral-300 border border-neutral-700',
     icon: <Clock className={iconSizes} />,
   };
 

@@ -214,11 +214,16 @@ Our model identified \`login_frequency_7d\` and \`support_tickets_open\` as the 
 // Helper for making API requests with fallback to mock data
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const apiKey = getTenantApiKey();
-  const headers = {
+  const tenantId = getTenantId();
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${apiKey}`,
     ...options.headers,
   };
+
+  if (apiKey && apiKey.startsWith('ey') && tenantId) {
+    headers['X-Tenant-ID'] = tenantId;
+  }
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -454,5 +459,39 @@ export const tenantsApi = {
         initial_key_name: 'Default Key',
       }),
     });
+  },
+};
+
+export const authApi = {
+  register: async (email: string, password: string, fullName: string, tenantName: string): Promise<any> => {
+    return request<any>('/api/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        password,
+        full_name: fullName,
+        tenant_name: tenantName,
+      }),
+    });
+  },
+  login: async (email: string, password: string): Promise<any> => {
+    const params = new URLSearchParams();
+    params.append('username', email);
+    params.append('password', password);
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params,
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.detail || `API Error: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
   },
 };

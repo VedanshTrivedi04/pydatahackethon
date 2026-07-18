@@ -9,7 +9,7 @@
   }
 
   body {
-    @apply bg-[#000000] text-[#ffffff] font-sans antialiased selection:bg-white selection:text-black;
+    @apply bg-[#030303] text-[#ffffff] font-sans antialiased selection:bg-[#3b82f6]/20 selection:text-white;
     overflow-x: hidden;
   }
 
@@ -19,38 +19,38 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #000000;
+    background: #030303;
   }
   ::-webkit-scrollbar-thumb {
     background: #1a1a1a;
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #ffffff;
+    background: #3b82f6;
   }
 }
 
 @layer utilities {
   /* Glassmorphism panel styling */
   .glass-panel {
-    background: rgba(10, 10, 10, 0.85);
+    background: rgba(10, 10, 10, 0.75);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .glass-header {
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(3, 3, 3, 0.85);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
 
-  /* Subtle white glow for active states */
-  .white-glow {
-    box-shadow: 0 0 25px rgba(255, 255, 255, 0.08);
+  /* Curated colored glows */
+  .primary-glow {
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.15);
   }
 
-  .white-border-glow {
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+  .primary-border-glow {
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.08);
   }
 }

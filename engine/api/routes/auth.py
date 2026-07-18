@@ -29,6 +29,8 @@ class UserRegisterRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    tenant_id: str | None = None
+    tenant_name: str | None = None
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -81,7 +83,11 @@ async def register_user(
     token_data = {"sub": str(new_user.id)}
     access_token = create_access_token(data=token_data)
     
-    return {"access_token": access_token}
+    return {
+        "access_token": access_token,
+        "tenant_id": str(new_tenant.id),
+        "tenant_name": new_tenant.name,
+    }
 
 
 @router.post("/token", response_model=TokenResponse)
@@ -103,7 +109,26 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
         
+    # Fetch default tenant for this user
+    stmt_member = select(TenantMember).where(TenantMember.user_id == user.id)
+    res_member = await session.execute(stmt_member)
+    member = res_member.scalars().first()
+    
+    tenant_id = None
+    tenant_name = None
+    if member:
+        stmt_tenant = select(Tenant).where(Tenant.id == member.tenant_id)
+        res_tenant = await session.execute(stmt_tenant)
+        tenant = res_tenant.scalars().first()
+        if tenant:
+            tenant_id = str(tenant.id)
+            tenant_name = tenant.name
+
     token_data = {"sub": str(user.id)}
     access_token = create_access_token(data=token_data)
     
-    return {"access_token": access_token}
+    return {
+        "access_token": access_token,
+        "tenant_id": tenant_id,
+        "tenant_name": tenant_name,
+    }
