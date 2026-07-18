@@ -8,7 +8,9 @@ Import order matters — models with no FK dependencies first.
 """
 
 from engine.core.models.base import TimestampedModel
+from engine.core.models.user import User
 from engine.core.models.tenant import Tenant, TenantSecret
+from engine.core.models.tenant_member import TenantMember
 from engine.core.models.job import Job, JobLog
 from engine.core.models.artifact import Artifact
 from engine.core.models.webhook import WebhookEvent
@@ -19,8 +21,10 @@ from engine.core.models.notification import Notification, RetryQueue
 
 __all__ = [
     "TimestampedModel",
+    "User",
     "Tenant",
     "TenantSecret",
+    "TenantMember",
     "Job",
     "JobLog",
     "Artifact",

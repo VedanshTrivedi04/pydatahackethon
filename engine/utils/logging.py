@@ -108,6 +108,7 @@ def bind_request_context(
     request_id: str,
     tenant_id: str | None = None,
     job_id: str | None = None,
+    correlation_id: str | None = None,
 ) -> None:
     """
     Bind request-level context to the structlog context vars.
@@ -120,12 +121,15 @@ def bind_request_context(
         request_id: Unique request ID for this HTTP request.
         tenant_id:  Resolved tenant UUID (if authenticated).
         job_id:     Job UUID if this request is job-specific.
+        correlation_id: Distributed tracing correlation ID.
     """
     context: dict[str, str] = {"request_id": request_id}
     if tenant_id:
         context["tenant_id"] = tenant_id
     if job_id:
         context["job_id"] = job_id
+    if correlation_id:
+        context["correlation_id"] = correlation_id
     structlog.contextvars.bind_contextvars(**context)
 
 

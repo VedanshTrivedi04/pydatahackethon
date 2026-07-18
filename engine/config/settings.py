@@ -128,6 +128,16 @@ class SecuritySettings(BaseSettings):
     secret_key: str = Field(default="CHANGE_ME_IN_PRODUCTION_AT_LEAST_32_CHARS")
 
 
+class JWTSettings(BaseSettings):
+    """JWT Authentication Settings for User login."""
+    
+    model_config = SettingsConfigDict(env_prefix="JWT_", extra="ignore")
+    
+    secret_key: str = Field(default="change-me-in-production")
+    algorithm: str = Field(default="HS256")
+    access_token_expire_minutes: int = Field(default=30)
+
+
 class Settings(BaseSettings):
     """
     Root application settings.
@@ -165,6 +175,7 @@ class Settings(BaseSettings):
     llm: LLMSettings = Field(default_factory=LLMSettings)
     github: GitHubSettings = Field(default_factory=GitHubSettings)
     viasocket: ViaSocketSettings = Field(default_factory=ViaSocketSettings)
+    jwt: JWTSettings = Field(default_factory=JWTSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
     sandbox: SandboxSettings = Field(default_factory=SandboxSettings)
 

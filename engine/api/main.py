@@ -64,12 +64,31 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error("shipfaster.database_connection_failed", error=str(e))
         # Don't crash on startup — let health endpoint report the issue
 
+    # Connect distributed EventBus
+    from engine.core.events import event_bus
+    await event_bus.connect()
+    
+    # Start Background Scheduler
+    from engine.core.scheduler import run_scheduler
+    scheduler_task = asyncio.create_task(run_scheduler())
+
     yield  # Application is running
 
     # ---------------------------------------------------------------
     # SHUTDOWN
     # ---------------------------------------------------------------
     logger.info("shipfaster.shutdown")
+    
+    # Disconnect EventBus
+    await event_bus.disconnect()
+    
+    # Cancel Scheduler
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        pass
+
     from engine.config.database import engine
     await engine.dispose()
 
@@ -125,6 +144,14 @@ def create_application() -> FastAPI:
     # 3. Auth — resolves tenant from Bearer token (soft — does not block)
     app.add_middleware(AuthMiddleware)
 
+    # 4. Rate Limiting — enforces limits based on resolved tenant or IP
+    from engine.api.middleware.rate_limiter import RateLimiterMiddleware
+    app.add_middleware(RateLimiterMiddleware)
+
+    # 5. Prometheus Metrics — records request counts and durations
+    from engine.api.middleware.metrics import MetricsMiddleware
+    app.add_middleware(MetricsMiddleware)
+
     # -------------------------------------------------------------------
     # Exception Handlers
     # -------------------------------------------------------------------
@@ -135,6 +162,9 @@ def create_application() -> FastAPI:
     # -------------------------------------------------------------------
     API_PREFIX = "/api/v1"
 
+    from engine.api.routes import auth, metrics
+    app.include_router(metrics.router, prefix=API_PREFIX)
+    app.include_router(auth.router, prefix=API_PREFIX)
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(tenants.router, prefix=API_PREFIX)
     app.include_router(jobs.router, prefix=API_PREFIX)

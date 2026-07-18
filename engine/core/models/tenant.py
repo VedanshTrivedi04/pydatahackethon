@@ -85,6 +85,12 @@ class Tenant(TimestampedModel):
     )
 
     # --- Relationships ---
+    members: Mapped[list["TenantMember"]] = relationship(
+        "TenantMember",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+        lazy="select",
+    )
     secrets: Mapped[list["TenantSecret"]] = relationship(
         "TenantSecret",
         back_populates="tenant",

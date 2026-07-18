@@ -141,9 +141,25 @@ celery_app = create_celery_app()
 @task_prerun.connect
 def on_task_prerun(task_id: str, task: object, args: tuple, kwargs: dict, **extra: object) -> None:
     """Log task start with task_id and job_id for observability."""
-    from engine.utils.logging import get_logger
+    from engine.utils.logging import get_logger, bind_request_context
     logger = get_logger("celery.signals")
-    job_id = kwargs.get("job_id", "unknown")
+    
+    # Extract headers (specifically x-correlation-id)
+    request = getattr(task, "request", None)
+    headers = getattr(request, "headers", {}) or {}
+    correlation_id = headers.get("x-correlation-id")
+    
+    job_id = kwargs.get("job_id")
+    tenant_id = kwargs.get("tenant_id")
+    
+    # Bind structlog context for the duration of this task execution
+    bind_request_context(
+        request_id=task_id,  # Use task_id as the local request_id
+        tenant_id=tenant_id,
+        job_id=job_id,
+        correlation_id=correlation_id,
+    )
+    
     logger.info(
         "celery.task_started",
         task_id=task_id,
@@ -157,8 +173,8 @@ def on_task_postrun(
     task_id: str, task: object, args: tuple, kwargs: dict,
     retval: object, state: str, **extra: object
 ) -> None:
-    """Log task completion with final state."""
-    from engine.utils.logging import get_logger
+    """Log task completion with final state and clear context."""
+    from engine.utils.logging import get_logger, clear_request_context
     logger = get_logger("celery.signals")
     job_id = kwargs.get("job_id", "unknown")
     logger.info(
@@ -168,6 +184,9 @@ def on_task_postrun(
         job_id=job_id,
         state=state,
     )
+    
+    # Clear structlog context to prevent leakage into the next task
+    clear_request_context()
 
 
 @task_failure.connect

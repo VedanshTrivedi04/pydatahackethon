@@ -61,6 +61,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         bind_request_context(
             request_id=request_id,
             tenant_id=tenant_id,
+            correlation_id=correlation_id,
         )
 
         # Record start time
