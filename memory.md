@@ -1,6 +1,6 @@
 # ShipFaster Dev 3 (Backend) — Memory & Context
 
-_Last Updated: Phase 1 Complete_
+_Last Updated: Phase 2 Complete_
 
 ---
 
@@ -75,9 +75,9 @@ Presentation (FastAPI routes)
 |---|---|---|
 | 0 | Analysis + planning | ✅ DONE |
 | 1 | Database models + Alembic + infra setup | ✅ DONE |
-| 2 | Auth + Multi-tenancy service layer | ⬜ NEXT |
-| 3 | Core FastAPI app + routes (stubs) | ⬜ PENDING |
-| 4 | Celery queue + workers | ⬜ PENDING |
+| 2 | Auth + Multi-tenancy service layer | ✅ DONE |
+| 3 | Core FastAPI app + routes (stubs) | ✅ DONE (with Phase 2) |
+| 4 | Celery queue + workers | ⬜ NEXT |
 | 5 | LLM client wrapper | ⬜ PENDING |
 | 6 | Webhook intake (GitHub/CI) | ⬜ PENDING |
 | 7 | viaSocket dispatch | ⬜ PENDING |
@@ -129,15 +129,52 @@ Presentation (FastAPI routes)
 
 ---
 
-## Phase 2 — NEXT: Auth + Multi-Tenancy
+## Phase 2 — COMPLETED ✅ (+ Phase 3 Core API bootstrapped)
+
+### Files Created
+| File | Purpose |
+|---|---|
+| `engine/core/auth/hasher.py` | API key generation + SHA-256 hashing + constant-time verify |
+| `engine/core/auth/bearer.py` | Bearer token extraction from Authorization header |
+| `engine/core/auth/__init__.py` | Auth package exports |
+| `engine/core/tenants/repository.py` | Repository Pattern — ALL tenant SQL lives here |
+| `engine/core/tenants/service.py` | Tenant business logic (create, auth, CRUD, key management) |
+| `engine/core/tenants/__init__.py` | Tenants package exports |
+| `engine/utils/exceptions.py` | Full domain exception hierarchy (AuthenticationError → JobStateError) |
+| `engine/utils/logging.py` | structlog setup — JSON in prod, colorized in dev |
+| `engine/api/middleware/auth.py` | Soft auth middleware (resolves tenant, never blocks public routes) |
+| `engine/api/middleware/logging.py` | Request logging — request_id, latency, X-Request-ID header |
+| `engine/api/dependencies/auth.py` | `get_current_tenant` FastAPI dependency (fast path + fallback) |
+| `engine/api/exceptions/handlers.py` | Global exception handlers — enterprise error format, no traceback leaks |
+| `engine/api/schemas/tenant.py` | Pydantic V2 schemas (CreateTenantRequest/Response, APIKeyMetadata, etc.) |
+| `engine/api/routes/tenants.py` | Full tenant + API key CRUD routes |
+| `engine/api/routes/health.py` | Liveness + readiness + detailed health probes |
+| `engine/api/main.py` | FastAPI application factory with middleware stack + lifespan |
+| `scripts/seed_demo_tenant.py` | Seed script for local testing |
+
+### Architecture Decisions (Phase 2)
+- **Two-tier auth**: Middleware does soft resolution (attaches to request.state); dependency enforces 401 on protected routes
+- **Fast path auth**: Protected routes use request.state.tenant (set by middleware) — zero extra DB calls on authenticated requests
+- **Constant-time key comparison**: `hmac.compare_digest` prevents timing attacks
+- **Key prefix**: First 12 chars of raw key stored as `key_prefix` for user identification without exposing hash
+- **Whitelist updates**: `TenantService.update_tenant` only allows specific fields — prevents mass assignment
+- **Factory pattern**: `create_application()` factory enables isolated test instances
+- **Middleware order**: CORS → RequestLogging → Auth (outermost to innermost)
+- **Soft auth middleware**: Webhooks bypass auth (they use their own signature verification)
+
+---
+
+## Phase 4 — NEXT: Celery Queue + Workers
 **Will create**:
-- `engine/core/auth/hasher.py` — SHA-256 API key hashing
-- `engine/core/auth/bearer.py` — Bearer token extractor
-- `engine/core/tenants/repository.py` — DB queries for tenant resolution
-- `engine/core/tenants/service.py` — Tenant business logic
-- `engine/api/middleware/auth.py` — Request authentication middleware
-- `engine/api/dependencies/auth.py` — `get_current_tenant` FastAPI dependency
-- `engine/api/schemas/tenant.py` — Pydantic request/response schemas for tenants
+- `engine/core/queue/celery_app.py` — Celery app with Redis broker
+- `engine/core/queue/task_router.py` — Task routing by module type
+- `engine/workers/execute_module.py` — Main Celery task (idempotent, with retry/backoff)
+- `engine/workers/retry_handler.py` — Dead-letter queue handler
+- `engine/workers/health.py` — Worker health reporting
+- `engine/api/schemas/job.py` — Job request/response Pydantic schemas
+- `engine/api/routes/jobs.py` — Job CRUD + approve/reject endpoints
+- `engine/core/jobs/repository.py` — Job repository
+- `engine/core/jobs/service.py` — Job orchestration service
 
 ---
 
@@ -147,13 +184,16 @@ Presentation (FastAPI routes)
 | 1 | Initialize GitHub repo + push markdown files | ✅ Done |
 | 2 | Analyze handover docs + create memory.md | ✅ Done |
 | 3 | Full architecture setup — divide into phases, start with Phase 1 DB | ✅ Done |
+| 4 | Continue → Phase 2 Auth + Multi-Tenancy + FastAPI bootstrap | ✅ Done |
 
 ---
 
 ## Known Issues / Gotchas
-- `hmac` in pyproject.toml dependencies is a stdlib module — **remove it** before `pip install`
 - Docker Postgres uses port 5434 (not 5432) to avoid EvalPro conflict — update `.env` accordingly
 - Alembic uses psycopg2 sync URL — `asyncpg` URL must NOT be used in `env.py`
+- `psycopg2` must be installed for Alembic sync engine (`pip install psycopg2-binary`)
+- Run `alembic upgrade head` before starting the API server
+- `structlog` must be installed for logging to work (`pip install structlog`)
 
 ---
 
