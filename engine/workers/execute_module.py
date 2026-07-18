@@ -230,16 +230,46 @@ async def _execute_async(
             )
 
         # ------------------------------------------------------------------
-        # PERSIST RESULT
+        # PERSIST ARTIFACTS & RESULT
         # ------------------------------------------------------------------
         async with AsyncSessionLocal() as result_session:
+            from engine.core.artifacts.service import ArtifactService
+            artifact_service = ArtifactService(result_session)
+            
+            # Upload each artifact to MinIO and persist DB record
+            for artifact_data in module_result.artifacts:
+                try:
+                    await artifact_service.upload_artifact(
+                        job_id=job_id,
+                        tenant_id=tenant_id,
+                        file_name=artifact_data.file_name,
+                        content=artifact_data.content,
+                        content_type=artifact_data.content_type,
+                        artifact_metadata=artifact_data.metadata,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "worker.artifact_upload_failed",
+                        job_id=str(job_id),
+                        file_name=artifact_data.file_name,
+                        error=str(e),
+                    )
+                    # We continue uploading others even if one fails,
+                    # but we could choose to fail the job here.
+
             result_repo = JobRepository(result_session)
             result_service = JobService(session=result_session, repository=result_repo)
+
+            # We strip out the raw content from the result before saving it to the Job output
+            # so we don't duplicate the massive files in PostgreSQL JSONB
+            clean_artifacts = [{"file_name": a.file_name} for a in module_result.artifacts]
+            safe_output = dict(module_result.output)
+            safe_output["_artifacts"] = clean_artifacts
 
             await result_service.on_worker_completed(
                 job_id=job_id,
                 status=module_result.status,
-                result=module_result.output,
+                result=safe_output,
                 error=module_result.error,
             )
 

@@ -14,17 +14,27 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
+class ArtifactData(BaseModel):
+    """
+    Data representing a generated artifact to be uploaded to MinIO.
+    """
+    file_name: str = Field(description="Name of the file (e.g., test_auth.py)")
+    content: bytes | str = Field(description="Raw file contents")
+    content_type: str = Field(default="application/octet-stream", description="MIME type")
+    metadata: dict[str, Any] | None = Field(default=None, description="Optional metadata")
+
 class ModuleResult(BaseModel):
     """
     Result returned by every AI module's run() function.
 
     Dev 1 must return exactly this shape from every handler.
-    Dev 3's Celery worker reads this and persists it to the jobs table.
+    Dev 3's Celery worker reads this, uploads artifacts to MinIO,
+    and persists it to the jobs table.
 
     Attributes:
         status:    Terminal state of the module execution.
         output:    Module-specific output data (free-form dict).
-        artifacts: List of artifact file paths/keys generated.
+        artifacts: List of ArtifactData objects containing the raw generated files.
         error:     Error message if status is 'failed' or 'partial'.
     """
 
@@ -35,9 +45,9 @@ class ModuleResult(BaseModel):
         default_factory=dict,
         description="Module-specific output payload",
     )
-    artifacts: list[str] = Field(
+    artifacts: list[ArtifactData] = Field(
         default_factory=list,
-        description="List of MinIO object keys for generated artifacts",
+        description="List of raw artifacts to upload to MinIO and persist",
     )
     error: str | None = Field(
         default=None,
