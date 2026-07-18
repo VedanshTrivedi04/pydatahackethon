@@ -147,6 +147,8 @@ def create_application() -> FastAPI:
     # -------------------------------------------------------------------
     API_PREFIX = "/api/v1"
 
+    from engine.api.routes import auth
+    app.include_router(auth.router, prefix=API_PREFIX)
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(tenants.router, prefix=API_PREFIX)
     app.include_router(jobs.router, prefix=API_PREFIX)

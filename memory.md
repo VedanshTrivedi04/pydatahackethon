@@ -402,8 +402,8 @@ A comprehensive architectural review of the codebase identified that while the C
 | 13.5 | Foundation Hardening | ✅ DONE |
 | 14 | Correlation IDs | ✅ DONE |
 | 15 | Redis Streams Event Bus | ✅ DONE |
-| 16 | Rate Limiter | ⬜ NEXT |
-| 17 | RBAC | ⬜ PENDING |
+| 16 | Rate Limiter | ✅ DONE |
+| 17 | RBAC | ⬜ NEXT |
 | 18 | Observability | ⬜ PENDING |
 | 19 | Feature Flags | ⬜ PENDING |
 | 20 | Subscription Plans | ⬜ PENDING |
@@ -449,10 +449,26 @@ A comprehensive architectural review of the codebase identified that while the C
 
 ---
 
-## Phase 16 — NEXT: API Rate Limiting
+## Phase 16 — COMPLETED ✅ (API Rate Limiting)
+
+### Files Modified
+| File | Purpose |
+|---|---|
+| `engine/api/middleware/rate_limiter.py` | Built `RateLimiterMiddleware` using Redis pipelines and a Fixed Window algorithm. |
+| `engine/api/main.py` | Registered the middleware immediately after `AuthMiddleware`. |
+
+### Architecture Decisions (Phase 16)
+- **Granular Limits**: Separated limits for authenticated traffic (per `tenant_id`) and unauthenticated traffic (per `X-Forwarded-For` IP address).
+- **Graceful Degradation**: If Redis fails or goes offline, the `RateLimiterMiddleware` fails open (catches the exception and calls `call_next`). It will not bring down the entire API just because caching went down.
+- **Standardized Headers**: Returns 429 Too Many Requests with standard `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
+
+---
+
+## Phase 17 — NEXT: Identity, Users & RBAC
 **Will create**:
-- Redis sliding window rate limiter middleware (`engine/api/middleware/rate_limiter.py`).
-- Protect infrastructure and LLM budgets based on tenant tiers.
+- `users` and `tenant_members` tables.
+- Role-based access control (Admin, Developer, Viewer).
+- JWT Authentication flow (`engine/api/routes/auth.py`).
 
 ---
 
@@ -513,6 +529,7 @@ A comprehensive architectural review of the codebase identified that while the C
 | 16  | Identify missing features (Feature flags, RBAC, etc.) + Update Roadmap | ✅ Done |
 | 17  | Continue → Phase 14 Correlation IDs                                 | ✅ Done |
 | 18  | Continue → Phase 15 Redis Event Bus                                 | ✅ Done |
+| 19  | Continue → Phase 16 Rate Limiter                                    | ✅ Done |
 
 ---
 
