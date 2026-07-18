@@ -13,6 +13,14 @@ Uses asyncpg (already installed) instead of psycopg2 via asyncio run_sync.
 
 from logging.config import fileConfig
 import asyncio
+import sys
+
+# ---------------------------------------------------------------
+# WINDOWS FIX: asyncpg requires SelectorEventLoop on Windows.
+# The default ProactorEventLoop causes WinError 121 (semaphore timeout).
+# ---------------------------------------------------------------
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from alembic import context
 from sqlalchemy.ext.asyncio import async_engine_from_config, AsyncConnection
@@ -84,11 +92,13 @@ def do_run_migrations(connection: AsyncConnection) -> None:
 async def run_migrations_online() -> None:
     """
     Run migrations in 'online' mode using asyncpg via async engine.
+    Uses create_async_engine directly so connect_args are properly passed.
     """
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    from sqlalchemy.ext.asyncio import create_async_engine as _create
+    connectable = _create(
+        url=async_db_url,
         poolclass=pool.NullPool,
+        connect_args={"ssl": False},  # Required for Windows local PostgreSQL
     )
 
     async with connectable.connect() as connection:

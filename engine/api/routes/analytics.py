@@ -10,11 +10,12 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from engine.api.middleware.auth import require_auth
+from engine.api.dependencies.auth import get_current_tenant
 from engine.api.schemas.analytics import JobSummaryResponse, LLMUsageSummaryResponse
 from engine.config.database import get_db_session
 from engine.core.jobs.repository import JobRepository
 from engine.core.llm.usage_tracker import LLMUsageTracker
+from engine.core.models.tenant import Tenant
 from engine.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -40,10 +41,10 @@ async def get_usage_tracker(session: AsyncSession = Depends(get_db_session)) -> 
 )
 async def get_job_summary(
     repo: JobRepository = Depends(get_job_repository),
-    auth: dict[str, Any] = Depends(require_auth),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, int]:
     """Get aggregated job counts."""
-    tenant_id = uuid.UUID(auth["tenant_id"])
+    tenant_id = current_tenant.id
     
     # Returns dict mapping status (e.g. 'success') to count
     counts = await repo.count_by_status(tenant_id)
@@ -70,10 +71,10 @@ async def get_job_summary(
 )
 async def get_llm_usage_summary(
     tracker: LLMUsageTracker = Depends(get_usage_tracker),
-    auth: dict[str, Any] = Depends(require_auth),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     """Get 30-day LLM usage aggregates."""
-    tenant_id = uuid.UUID(auth["tenant_id"])
+    tenant_id = current_tenant.id
     
     summary = await tracker.get_usage_summary(tenant_id, days=30)
     

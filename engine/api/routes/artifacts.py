@@ -10,9 +10,10 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from engine.api.middleware.auth import require_auth
+from engine.api.dependencies.auth import get_current_tenant
 from engine.config.database import get_db_session
 from engine.core.artifacts.service import ArtifactService
+from engine.core.models.tenant import Tenant
 from engine.utils.exceptions import BusinessValidationError
 
 router = APIRouter(prefix="/artifacts", tags=["Artifacts"])
@@ -35,10 +36,10 @@ async def get_artifact_download_url(
     artifact_id: uuid.UUID,
     request: Request,
     service: ArtifactService = Depends(get_artifact_service),
-    auth: dict[str, Any] = Depends(require_auth),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, str]:
     """Get a short-lived download link for the artifact."""
-    tenant_id = uuid.UUID(auth["tenant_id"])
+    tenant_id = current_tenant.id
     
     url = await service.get_download_url(artifact_id, tenant_id)
     return {"download_url": url}

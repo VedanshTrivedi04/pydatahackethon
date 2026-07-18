@@ -41,6 +41,16 @@ def _drop_color_message_key(
     return event_dict
 
 
+def _add_logger_name(
+    logger: WrappedLogger, method_name: str, event_dict: EventDict
+) -> EventDict:
+    """Add the logger name if available, safe fallback for PrintLogger."""
+    name = getattr(logger, "name", None)
+    if name:
+        event_dict["logger"] = name
+    return event_dict
+
+
 def configure_logging() -> None:
     """
     Configure structlog and stdlib logging.
@@ -51,7 +61,7 @@ def configure_logging() -> None:
         structlog.contextvars.merge_contextvars,
         _add_log_level,
         _drop_color_message_key,
-        structlog.stdlib.add_logger_name,
+        _add_logger_name,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,

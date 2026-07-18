@@ -19,6 +19,9 @@ import os
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"), override=True)
+
 from engine.config.database import AsyncSessionLocal
 from engine.core.tenants.repository import TenantRepository
 from engine.core.tenants.service import TenantService
@@ -67,4 +70,6 @@ async def seed_demo_tenant() -> None:
 
 
 if __name__ == "__main__":
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(seed_demo_tenant())

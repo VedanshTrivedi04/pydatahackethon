@@ -51,6 +51,7 @@ def create_engine() -> AsyncEngine:
         echo=settings.db.echo,
         json_serializer=_json_serializer,
         json_deserializer=_json_deserializer,
+        connect_args={"ssl": False},  # Disable SSL for local/dev connections
     )
 
 

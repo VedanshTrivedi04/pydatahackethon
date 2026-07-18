@@ -16,7 +16,7 @@ from engine.config.database import get_db_session
 from engine.core.jobs.service import JobService
 from engine.core.jobs.repository import JobRepository
 from engine.core.webhooks.service import WebhookService
-from engine.utils.exceptions import AuthError, BusinessValidationError
+from engine.utils.exceptions import AuthenticationError as AuthError, BusinessValidationError
 from engine.utils.logging import get_logger
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])

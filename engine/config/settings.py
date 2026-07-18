@@ -6,10 +6,15 @@ All configuration is typed and validated at startup.
 """
 
 from functools import lru_cache
+import os
 from typing import Literal
 
+from dotenv import load_dotenv
 from pydantic import Field, PostgresDsn, RedisDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Load environment variables globally from project root .env
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".env"), override=True)
 
 
 class DatabaseSettings(BaseSettings):
@@ -30,12 +35,12 @@ class DatabaseSettings(BaseSettings):
     @property
     def async_url(self) -> str:
         """Async PostgreSQL connection URL."""
-        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}?sslmode=disable"
+        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
 
     @property
     def sync_url(self) -> str:
         """Sync PostgreSQL connection URL (for Alembic)."""
-        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}?sslmode=disable"
+        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
 
 
 class RedisSettings(BaseSettings):

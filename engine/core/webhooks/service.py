@@ -16,7 +16,7 @@ from engine.core.jobs.service import JobService
 from engine.core.models.tenant import Tenant
 from engine.core.webhooks.repository import WebhookRepository
 from engine.core.webhooks.security import verify_github_signature
-from engine.utils.exceptions import BusinessValidationError, NotFoundError, AuthError
+from engine.utils.exceptions import BusinessValidationError, NotFoundError, AuthenticationError as AuthError
 from engine.utils.logging import get_logger
 
 logger = get_logger(__name__)
