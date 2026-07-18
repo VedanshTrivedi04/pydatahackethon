@@ -41,6 +41,10 @@ def create_engine() -> AsyncEngine:
     Uses asyncpg driver with connection pooling configured
     from application settings.
     """
+    connect_args = {}
+    if settings.environment == "development":
+        connect_args["ssl"] = False
+
     return create_async_engine(
         url=settings.db.async_url,
         pool_size=settings.db.pool_size,
@@ -51,7 +55,7 @@ def create_engine() -> AsyncEngine:
         echo=settings.db.echo,
         json_serializer=_json_serializer,
         json_deserializer=_json_deserializer,
-        connect_args={"ssl": False},  # Disable SSL for local/dev connections
+        connect_args=connect_args,
     )
 
 

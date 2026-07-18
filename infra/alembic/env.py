@@ -95,10 +95,14 @@ async def run_migrations_online() -> None:
     Uses create_async_engine directly so connect_args are properly passed.
     """
     from sqlalchemy.ext.asyncio import create_async_engine as _create
+    connect_args = {}
+    if settings.environment == "development":
+        connect_args["ssl"] = False
+
     connectable = _create(
         url=async_db_url,
         poolclass=pool.NullPool,
-        connect_args={"ssl": False},  # Required for Windows local PostgreSQL
+        connect_args=connect_args,
     )
 
     async with connectable.connect() as connection:
