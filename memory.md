@@ -1,6 +1,6 @@
 # ShipFaster Dev 3 (Backend) — Memory & Context
 
-_Last Updated: Phase 9 Complete_
+_Last Updated: Phase 10 Complete_
 
 ---
 
@@ -83,8 +83,8 @@ Presentation (FastAPI routes)
 | 7 | viaSocket dispatch | ✅ DONE |
 | 8 | Artifact storage (MinIO) | ✅ DONE |
 | 9 | Sandbox executor | ✅ DONE |
-| 10 | Event system | ⬜ NEXT |
-| 11 | Analytics & observability | ⬜ PENDING |
+| 10 | Event system | ✅ DONE |
+| 11 | Analytics & observability | ⬜ NEXT |
 | 12 | Structured logging | ⬜ PENDING |
 | 13 | Tests | ⬜ PENDING |
 
@@ -303,10 +303,27 @@ Presentation (FastAPI routes)
 
 ---
 
-## Phase 10 — NEXT: Event System
+## Phase 10 — COMPLETED ✅ (Event System)
+
+### Files Created
+| File | Purpose |
+|---|---|
+| `engine/core/events/types.py` | Defined standard `SystemEvent` Pydantic schema and allowed `EventType`s. |
+| `engine/core/events/bus.py` | Built a lightweight async in-memory Pub/Sub `EventBus` singleton. |
+| `engine/core/events/__init__.py` | Package exports. |
+
+### Integration Points
+- **`JobService`**: Emits `job.created`, `job.status_changed`, `job.completed`, and `job.failed` internally so other modules (like a future notifications engine) can hook into the job lifecycle without adding spaghetti logic to `JobService`.
+
+### Architecture Decisions (Phase 10)
+- **Decoupling**: The system can now add new reactions to standard state changes just by calling `event_bus.subscribe()`.
+
+---
+
+## Phase 11 — NEXT: Analytics & Observability
 **Will create**:
-- Core internal pub/sub system to emit events (e.g., `job.status_changed`, `tenant.created`).
-- Allows decoupling components (e.g. firing notifications without hardcoding logic into `JobService`).
+- API route for a dashboard to pull aggregated job status metrics (e.g. success rate, total tokens used, jobs per module).
+- `engine/api/routes/analytics.py` for standard metrics querying.
 
 ---
 
@@ -323,6 +340,7 @@ Presentation (FastAPI routes)
 | 8   | Continue → Phase 7 viaSocket Dispatch                               | ✅ Done |
 | 9   | Continue → Phase 8 Artifact Storage (MinIO)                         | ✅ Done |
 | 10  | Continue → Phase 9 Sandbox Executor                                 | ✅ Done |
+| 11  | Continue → Phase 10 Event System                                    | ✅ Done |
 
 ---
 

@@ -130,6 +130,13 @@ class JobService:
         )
         job = await self._repo.create(job)
 
+        from engine.core.events import event_bus, SystemEvent
+        await event_bus.emit(SystemEvent(
+            type="job.created",
+            tenant_id=str(tenant_id),
+            payload={"job_id": str(job.id), "module": module, "trigger": trigger}
+        ))
+
         # Log job creation
         await self._repo.add_log(
             job_id=job.id,
@@ -414,6 +421,13 @@ class JobService:
             job_id: UUID of the job being processed.
         """
         await self._repo.mark_started(job_id)
+
+        from engine.core.events import event_bus, SystemEvent
+        await event_bus.emit(SystemEvent(
+            type="job.status_changed",
+            payload={"job_id": str(job_id), "status": "running"}
+        ))
+
         await self._repo.add_log(
             job_id=job_id,
             event="job.worker_started",
@@ -443,6 +457,14 @@ class JobService:
             result=result,
             error=error,
         )
+
+        from engine.core.events import event_bus, SystemEvent
+        event_type = "job.completed" if status == "success" else "job.failed"
+        await event_bus.emit(SystemEvent(
+            type=event_type,
+            payload={"job_id": str(job_id), "status": status, "error": error}
+        ))
+
         level = "INFO" if status == "success" else "ERROR" if status == "failed" else "WARNING"
         await self._repo.add_log(
             job_id=job_id,
