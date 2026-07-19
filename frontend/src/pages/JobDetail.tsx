@@ -227,7 +227,7 @@ export const JobDetail: React.FC = () => {
                   >
                     <span className="text-neutral-300 truncate">{art}</span>
                     <button
-                      onClick={() => alert(`Downloading artifact from storage: ${art}`)}
+                      onClick={() => window.open(`http://localhost:8000/api/v1/artifacts/download-file?key=${encodeURIComponent(`${job.tenant_id}/${job.job_id}/${art}`)}`, '_blank')}
                       className="px-3 py-1 rounded-lg bg-[#141414] hover:bg-[#00f0ff] hover:text-[#0a0a0a] text-neutral-300 font-semibold transition-all flex items-center gap-1.5 shrink-0"
                     >
                       <Download className="w-3.5 h-3.5" /> Download

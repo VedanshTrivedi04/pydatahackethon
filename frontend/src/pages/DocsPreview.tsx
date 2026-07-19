@@ -81,8 +81,18 @@ Every generated artifact and database record strictly enforces \`tenant_id\` iso
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownload = () => {
+    const element = document.createElement("a");
+    const file = new Blob([docsData[activeTab]], {type: 'text/markdown'});
+    element.href = URL.createObjectURL(file);
+    element.download = `${activeTab}_documentation.md`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white py-10 px-6 lg:px-12 max-w-6xl mx-auto">
+    <div className="min-h-screen bg-[#030303] text-white py-10 px-6 lg:px-12 max-w-6xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-[#1f1f1f]">
         <div>
           <div className="inline-flex items-center gap-2 font-mono text-xs text-[#00f0ff] uppercase tracking-wider mb-1">
@@ -103,7 +113,7 @@ Every generated artifact and database record strictly enforces \`tenant_id\` iso
           </button>
 
           <button
-            onClick={() => alert('Downloading markdown documentation artifact from S3...')}
+            onClick={handleDownload}
             className="px-4 py-2 rounded-xl bg-[#00f0ff] hover:bg-[#00d0df] text-[#0a0a0a] text-xs font-bold font-sans flex items-center gap-2 shadow-[0_0_15px_rgba(0,240,255,0.25)] transition-all"
           >
             <Download className="w-3.5 h-3.5" />
